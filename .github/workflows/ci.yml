@@ -1,0 +1,18 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Leak scan (fails on any private detail)
+        run: python tools/scan_public.py
+      - name: sports-hub unit tests
+        working-directory: sports-hub
+        run: PYTHONPATH=app python -m unittest discover -s tests -v
+      - name: sports-hub image builds
+        working-directory: sports-hub
+        run: docker build -t orbital-sports-hub .

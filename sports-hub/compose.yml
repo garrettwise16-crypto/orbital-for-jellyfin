@@ -1,0 +1,19 @@
+services:
+  sports-hub:
+    build: .
+    container_name: sports-hub
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - sports-preferences:/preferences
+    # Put it behind the same reverse proxy as Jellyfin at /sports/ (see README). Loopback only by default.
+    ports:
+      - "127.0.0.1:8080:8080"
+    mem_limit: 256m
+    cpus: 1.0
+    read_only: true
+    tmpfs:
+      - /tmp
+
+volumes:
+  sports-preferences:
