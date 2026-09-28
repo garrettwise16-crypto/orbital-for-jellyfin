@@ -17,4 +17,5 @@ Orbital is a set of add-ons that make a self-hosted Jellyfin server feel like a 
 
 ## License
 
-To be chosen before publication. The web and Android TV pieces modify GPL-2.0 projects and will be GPL-2.0.
+- **Original code** (sports-hub, tools): [MIT](LICENSE). It's short and permissive, and it's the norm for self-hosted add-ons, so anyone can reuse the sports layer in their own setup.
+- **Web interface and Android TV app:** these modify jellyfin-web and jellyfin-androidtv, so they will be released under GPL-2.0, as those projects require. Each will carry its own `LICENSE` in its folder.
