@@ -27,6 +27,13 @@ RULES = {
     'credential': r'(?i)(?:api[_-]?key|access[_-]?token|secret|password)\s*[=:]\s*["\']?[A-Za-z0-9/+_-]{12,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|'
                   r'\b[0-9a-f]{32}\b',
     'agent handoff': r'\bAGENTS\.md\b|handoff|receipt\.json',
+    # Proprietary FlarePaths technology (MomentLock: viewer-picture synchronization; SignalTrust: source
+    # semantic trust and failure domains). It lives only in the private FlarePaths repository; see the
+    # release plan section 7. Public trackers show the latest reported state only.
+    'proprietary FlarePaths technology': r'\b(?:moment[-_ ]?lock|signal[-_ ]?trust|flare[-_ ]?paths?)\b|'
+        r'picture[_-]?(?:estimate|match|capture|clock|service|worker)|layout[_-]?adapters?|scorebug|AutomaticMlbPicture|'
+        r'OffsetWindow|NativePictureCapture|PlaybackTiming|TrackerSync|autosync|feed[_-]?evidence|source[_-]?(?:graph|eligibility|choices)|'
+        r'admission[_-]?broker|failure[_-]?domain|presentation[_-]?coordinate|media[_-]?coordinate|requestVideoFrameCallback',
 }
 # (rule, file glob, regex on the matched text) combinations reviewed as legitimate.
 ALLOW = [
