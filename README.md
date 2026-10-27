@@ -2,12 +2,12 @@
 
 Orbital is a set of add-ons that make a self-hosted Jellyfin server feel like a streaming service: a cinematic web interface, an Android TV app and a live sports layer.
 
-**Status:** first public release. The live sports layer is published first; the web interface and Android TV app follow as they are cleaned up for sharing.
+**Status:** first public release. The live sports layer is published first; the web interface is available as a preview; the Android TV app follows as it is prepared for sharing.
 
 | Piece | Folder | State |
 |---|---|---|
 | Live sports: scores, game centers, trackers, favorite teams, pairing games with your own channels | `sports-hub/` | staged; tests and container build |
-| Orbital web interface for jellyfin-web | `web/` | not yet staged |
+| Orbital web interface for jellyfin-web | `web/` | preview; see web/README.md |
 | Orbital TV (Android TV fork of jellyfin-androidtv) | `android-tv/` | not yet staged |
 
 ## Ground rules for this repository

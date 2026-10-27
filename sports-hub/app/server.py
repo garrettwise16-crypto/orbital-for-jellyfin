@@ -664,7 +664,7 @@ def attach_channels(events, channels, aliases=None):
     order = {'live': 0, 'scheduled': 1, 'unresolved': 2, 'unavailable': 3, 'final': 4}
     return sorted(result, key=lambda e: (order.get(e['state'], 2), e['start'], e['id']))
 
-ROUTES = ('/sports/api/events', '/sports/api/rankings', '/sports/api/tracker', '/sports/api/preview',
+ROUTES = ('/sports/api/status', '/sports/api/events', '/sports/api/rankings', '/sports/api/tracker', '/sports/api/preview',
           '/sports/api/team-directory', '/sports/api/team', '/sports/api/team-preferences')
 
 
@@ -722,6 +722,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(401, {'error': 'Sign in to Jellyfin to browse sports'})
             try:
                 user = get_json(JELLYFIN + '/Users/Me', token)
+                if path.path == '/sports/api/status':
+                    return self.respond(200, {'sports': True, 'version': 'public-web-1', 'watched_game': 'estimated'})
                 if path.path == '/sports/api/team-preferences':
                     import team_preferences
                     status, data = team_preferences.access(user['Id'], getattr(self, 'preference_body', None))

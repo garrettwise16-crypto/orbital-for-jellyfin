@@ -1,0 +1,13 @@
+/* Orbital for Jellyfin, public web edition. */
+/* Orbital for Jellyfin, customer edition: hide entry points to services this edition does not include.
+ * Selectors were taken from the running shell (lab); each line names what it hides. */
+.orbital-top-requests, a[href*="requests.html"], a[href^="https://example.invalid"],
+a[href*="orbitalBrowse=requests"], [data-orbital-nav="requests"],
+.orbital-keep-available, .orbital-keep-note { display: none !important; }                  /* Seerr requests / keep-available */
+.orbital-admin-tools { display: none !important; }                                         /* owner's admin shortcuts */
+a[href*="orbitalBrowse=services"], .ob5-shelf:has([data-service]) { display: none !important; } /* streaming-service catalogue */
+html:not(.orbital-ce-sports) a[href*="sports=1"] { display: none !important; }             /* sports: until the plugin answers */
+html:not(.orbital-ce-sports) .ob5-shelf[aria-label="Your teams"] { display: none !important; } /* sports: Home "Your teams" shelf (and its reveal button) */
+.ox-item-actions, .ox-open { display: none !important; }                                   /* experience service: personal library, watchlist/hide/feedback */
+html.orbital-ce-no-livetv a[href^="#/livetv"]:not([href*="sports=1"]),
+html.orbital-ce-no-livetv a[href*="#/livetv"]:not([href*="sports=1"]) { display: none !important; } /* no tuner (Sports still shows) */

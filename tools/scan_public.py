@@ -15,6 +15,8 @@ TEXT = {'.py', '.md', '.yml', '.yaml', '.toml', '.txt', '.json', '.example', '.c
         '.kt', '.java', '.xml', '.gradle', '.kts', '.sh', '.gitignore', '.dockerignore', ''}
 SKIP_DIRS = {'.git', '__pycache__', '.pytest_cache', 'node_modules', '.venv'}
 MAX_BYTES = 400_000
+# The built web interface ships as single files; they are scanned in full, just with a larger size bound.
+WEB_DIST_MAX_BYTES = 1_600_000
 
 RULES = {
     'public or LAN address': r'\b(?:50\.27\.40\.203|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})\b',
@@ -38,10 +40,18 @@ RULES = {
 # (rule, file glob, regex on the matched text) combinations reviewed as legitimate.
 ALLOW = [
     ('credential', '*.example', r'.*'),  # documented placeholders only
+    # Web-standard names in the built interface: the browser frame callback (first-frame playback checks) and the
+    # HLS playlist extension. The build removes the private sync modules and verifies they are absent.
+    ('proprietary FlarePaths technology', 'dist/*.js', r'requestVideoFrameCallback'),
+    ('private media source', 'dist/*.js', r'm3u8'),
 ]
 
 
 def allowed(rule, path, text):
+    if rule in ('proprietary FlarePaths technology', 'private media source'):
+        relative = path.as_posix().removeprefix('web/')
+        if relative not in {'dist/orbital.js', 'dist/live-tv.js', 'dist/phone.js'}:
+            return False
     return any(r == rule and path.match(g) and re.fullmatch(t, text) for r, g, t in ALLOW)
 
 
@@ -57,7 +67,8 @@ def main():
         if path.suffix.lower() in ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.apk', '.zip', '.sqlite3', '.db', '.jks', '.keystore'):
             findings.append((rel, 0, 'binary/private file type', path.suffix))
             continue
-        if path.stat().st_size > MAX_BYTES:
+        limit = WEB_DIST_MAX_BYTES if rel.as_posix().removeprefix('web/') in {'dist/orbital.js','dist/live-tv.js','dist/phone.js','dist/orbital.css','dist/live-tv.css'} else MAX_BYTES
+        if path.stat().st_size > limit:
             findings.append((rel, 0, 'file too large', str(path.stat().st_size)))
             continue
         if path.suffix.lower() not in TEXT and suffix not in TEXT and path.name not in ('Dockerfile', 'LICENSE'):

@@ -10,6 +10,15 @@ jobs:
           python-version: '3.12'
       - name: Leak scan (fails on any private detail)
         run: python tools/scan_public.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Scanner boundary tests
+        run: python -m unittest discover -s tools -p "test_*.py"
+      - name: Public tracker clock
+        run: node web/tests/public-clock.test.js
+      - name: Parse web scripts
+        run: for file in web/dist/*.js; do node --check "$file"; done
       - name: sports-hub unit tests
         working-directory: sports-hub
         run: PYTHONPATH=app python -m unittest discover -s tests -v
