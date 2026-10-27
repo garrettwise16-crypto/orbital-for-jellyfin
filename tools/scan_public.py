@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(sys.argv[1] if len(sys.argv) > 1 else Path(__file__).resolve().parents[1])
 TEXT = {'.py', '.md', '.yml', '.yaml', '.toml', '.txt', '.json', '.example', '.cfg', '.ini', '.js', '.css', '.html',
-        '.kt', '.java', '.xml', '.gradle', '.kts', '.sh', '.gitignore', '.dockerignore', ''}
+        '.cs', '.csproj', '.kt', '.java', '.xml', '.gradle', '.kts', '.sh', '.gitignore', '.dockerignore', ''}
 SKIP_DIRS = {'.git', '__pycache__', '.pytest_cache', 'node_modules', '.venv'}
 MAX_BYTES = 400_000
 # The built web interface ships as single files; they are scanned in full, just with a larger size bound.
@@ -48,6 +48,18 @@ ALLOW = [
 
 
 def allowed(rule, path, text):
+    # Required upstream copyright/contact notices, retained verbatim.
+    license_contacts = {'setup/notices/Python-LICENSE.txt': {'jseward@acm.org'},
+                        'setup/notices/zlib-LICENSE.txt': {'jloup@gzip.org', 'madler@alumni.caltech.edu'}}
+    if rule == 'email address' and text in license_contacts.get(path.as_posix(), set()): return True
+    # Reviewed Windows standard environment/directory names; no owner paths.
+    if rule == 'local path' and path.as_posix() in {'setup/fpmigrate/appinstall.py','setup/fpmigrate/cli.py','setup/fpmigrate/orbital.py'} and text == 'APPDATA': return True
+    if rule == 'private hostname' and path.as_posix() == 'setup/fpmigrate/cli.py' and text == '.local': return True
+    # Code expression, not a credential value.
+    if rule == 'credential' and path.as_posix() == 'setup/fpmigrate/engine.py' and text == 'password = generate_password': return True
+    # Negative endpoint test: confirms this private API returns404 in the public service.
+    if rule == 'proprietary FlarePaths technology' and path.as_posix() == 'setup/tests/test_sports.py' and text == 'picture-estimate': return True
+
     if rule in ('proprietary FlarePaths technology', 'private media source'):
         relative = path.as_posix().removeprefix('web/')
         if relative not in {'dist/orbital.js', 'dist/live-tv.js', 'dist/phone.js'}:

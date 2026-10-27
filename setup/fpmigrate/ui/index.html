@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbital Setup</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="brand"><span class="mark" aria-hidden="true"></span><span>Orbital Setup</span></div>
+  <ol class="steps" id="steps" aria-label="Progress">
+    <li data-step="start"><span class="dot" aria-hidden="true"></span>Start</li>
+    <li data-step="connect"><span class="dot" aria-hidden="true"></span>Connect</li>
+    <li data-step="plan"><span class="dot" aria-hidden="true"></span>Your plan</li>
+    <li data-step="done"><span class="dot" aria-hidden="true"></span>Watch</li>
+  </ol>
+</header>
+<main id="main" tabindex="-1">
+  <div id="live" class="sr" aria-live="polite"></div>
+  <div id="error" class="banner error" role="alert" hidden></div>
+
+  <!-- 1. Start ---------------------------------------------------------------------------------- -->
+  <section data-panel="start">
+    <p class="sub">Private preview · Windows installation still needs clean-machine verification. Use a test setup.</p>
+    <h1>Make Jellyfin yours</h1>
+    <fieldset class="card"><legend>Where are you starting?</legend>
+      <label class="inline"><input type="radio" name="journey" value="fresh" checked> I'm starting fresh</label>
+      <label class="inline"><input type="radio" name="journey" value="existing"> I already use Jellyfin</label>
+      <label class="inline"><input type="radio" name="journey" value="migration"> I'm moving from Plex</label>
+    </fieldset>
+    <p class="lead">Choose what you want. We'll check your computer, carry out the setup, and explain each step as it happens.</p>
+    <div class="status-list" aria-live="polite">
+      <div class="status" id="st-plex"><span class="icon wait" aria-hidden="true"></span><div><strong>Plex</strong><span class="sub">Looking on this PC...</span></div></div>
+      <div class="status" id="st-jf"><span class="icon wait" aria-hidden="true"></span><div><strong>Jellyfin</strong><span class="sub">Looking on this PC...</span></div></div>
+    </div>
+    <div id="jf-install" class="card soft" hidden>
+      <h2>Add Jellyfin to this PC</h2>
+      <p>We'll download and install Jellyfin 12.2, the version tested with these features, using Windows Package Manager, then check that it starts. Windows may ask you to allow the installation.</p>
+      <label class="inline"><input id="install-agree" type="checkbox"> Install Jellyfin and accept its package and Windows Package Manager source agreements.</label>
+      <button id="btn-install-server">Install Jellyfin</button>
+      <p id="server-progress" role="status"></p>
+    </div>
+    <div class="actions">
+      <button class="primary big" id="btn-start" disabled>Get started</button>
+    </div>
+    <ul class="promises">
+      <li>Never changes, moves or deletes your videos</li>
+      <li>Only reads from Plex</li>
+      <li>Shows you everything before copying, and can undo it</li>
+      <li>Your media stays where it is; connected services receive only the requests needed for their features</li>
+    </ul>
+    <details class="adv"><summary>Plex or Jellyfin runs on a different computer</summary>
+      <label for="plex-url">Plex address</label><input id="plex-url" placeholder="http://jellyfin.example.com:32400" autocomplete="off">
+      <label for="jf-url">Jellyfin address</label><input id="jf-url" placeholder="http://jellyfin.example.com:8096" autocomplete="off">
+      <button id="btn-recheck">Look again</button>
+    </details>
+    <p class="fine">Not affiliated with Plex Inc. or the Jellyfin project.</p>
+  </section>
+
+  <!-- 2. Connect -------------------------------------------------------------------------------- -->
+  <section data-panel="connect" hidden>
+    <h1>Connect your servers</h1>
+    <div class="card" id="plex-card">
+      <h2><span class="icon" id="plex-icon" aria-hidden="true"></span> Plex</h2>
+      <p id="plex-text"></p>
+      <button class="primary" id="btn-plex-signin" hidden>Sign in with Plex</button>
+      <p class="sub" id="plex-signin-status" role="status"></p>
+    </div>
+    <form class="card" id="jf-form" novalidate>
+      <h2><span class="icon" id="jf-icon" aria-hidden="true"></span> Jellyfin</h2>
+      <p id="jf-intro"></p>
+      <label for="jf-user">Name</label>
+      <input id="jf-user" autocomplete="username" required>
+      <label for="jf-pass">Password</label>
+      <div class="pw-wrap"><input id="jf-pass" type="password" autocomplete="current-password" required aria-describedby="pw-hint">
+        <button type="button" class="ghost" id="btn-showpw" aria-pressed="false">Show</button></div>
+      <p class="sub" id="pw-hint"></p>
+      <div class="actions"><button class="primary big" type="submit" id="btn-jf">Continue</button></div>
+    </form>
+  </section>
+
+  <section data-panel="features" hidden>
+    <h1>Choose what Jellyfin does for you</h1>
+    <p class="lead">Add one feature or both. You can return and change your choices later.</p>
+    <div class="card" id="new-library">
+      <h2>Your movies, shows and music</h2>
+      <p>Choose a folder on the computer running Jellyfin. We'll check access, add the library and start finding your titles. Your files stay where they are.</p>
+      <label for="library-name">Library name</label><input id="library-name" value="Movies">
+      <label for="library-kind">What's in this folder?</label><select id="library-kind"><option value="movies">Movies</option><option value="tvshows">TV shows</option><option value="music">Music</option></select>
+      <button id="browse-folders">Choose a folder</button><div id="folder-list"></div>
+      <p id="chosen-folder">No folder selected</p><button id="add-library" disabled>Add this library</button>
+      <p id="library-progress" role="status"></p><p class="sub">Choosing a folder does not add it yet. Use <strong>Add this library</strong> to save it.</p>
+    </div>
+    <div class="card">
+      <button id="features-all">Select all available features</button>
+      <label class="inline"><input id="feature-orbital" type="checkbox"> Orbital look — cinematic browsing in the web app</label><p id="feature-orbital-status" class="sub"></p>
+      <label class="inline"><input id="feature-sports" type="checkbox"> Sports — games from your TV guide and sources you connect</label><p id="feature-sports-status" class="sub"></p>
+      <p class="sub">Sports can be installed on its own. The Orbital look adds the Sports screen. Scores and team logos depend on the source you choose afterwards.</p>
+      <label class="inline"><input id="feature-restart" type="checkbox"> Jellyfin can restart to add Sports. Anyone watching will be interrupted.</label>
+      <p>These features are free. Automatic picture matching and advanced feed checks are planned for Plus and aren't included here.</p>
+    </div>
+    <div class="actions"><button id="install-features" class="primary">Set up selected features</button><button id="skip-features">Continue without installing features</button><button id="refresh-features">Check setup again</button></div>
+    <p class="sub">Selecting a feature does not install it yet. Use <strong>Set up selected features</strong> to apply your choices.</p><div id="feature-progress" role="status" aria-live="polite"></div>
+  </section>
+
+  <!-- 3. Plan ----------------------------------------------------------------------------------- -->
+  <section data-panel="plan" hidden>
+    <h1>Here's the plan</h1>
+    <div class="card plan" id="plan-summary"></div>
+    <p class="plan-done" id="plan-done" hidden></p>
+
+    <details class="card customize" id="customize"><summary>Change libraries, people or options</summary>
+      <h3>Libraries</h3>
+      <table class="grid"><thead><tr><th scope="col">Include</th><th scope="col">Plex library</th><th scope="col">Folders</th><th scope="col">In Jellyfin</th></tr></thead><tbody id="lib-rows"></tbody></table>
+      <h3>People</h3>
+      <div class="row" id="profile-tools">
+        <button id="btn-profiles" hidden>Find Plex Home profiles</button>
+        <label class="inline" for="chk-history"><input type="checkbox" id="chk-history"> Include people you share with (watched titles only)</label>
+      </div>
+      <table class="grid"><thead><tr><th scope="col">Plex person</th><th scope="col">What can be copied</th><th scope="col">Jellyfin account</th></tr></thead><tbody id="people-rows"></tbody></table>
+      <h3>Options</h3>
+      <label class="inline" for="opt-ratings"><input type="checkbox" id="opt-ratings" checked> Copy star ratings</label>
+      <label class="inline" for="opt-fav"><input type="checkbox" id="opt-fav"> Add titles rated 4 or 5 stars to Favorites</label>
+      <label class="inline" for="opt-home"><input type="checkbox" id="opt-home" checked> Arrange Jellyfin's Home like Plex (Continue Watching first)</label>
+      <label class="inline" for="opt-orbital" id="opt-orbital-wrap" hidden><input type="checkbox" id="opt-orbital" checked> Use the Orbital look in Jellyfin's web app (cinematic Home, smarter browsing, richer show pages)</label>
+      <label class="inline" for="opt-sports" id="opt-sports-wrap" hidden><input type="checkbox" id="opt-sports" checked> Add Sports to the Orbital look: the games in your TV guide, with scores and more from sources you choose (adds a small Jellyfin plugin; Jellyfin restarts once)</label>
+    </details>
+
+    <div class="actions" id="setup-actions"><button class="primary big" id="btn-setup">Set up Jellyfin</button>
+      <span class="sub">Creates the libraries and checks every title. Nothing is copied yet.</span></div>
+
+    <ol class="checklist" id="checklist" hidden aria-live="polite">
+      <li data-k="libraries">Adding your libraries to Jellyfin</li>
+      <li data-k="scan">Jellyfin reads your library</li>
+      <li data-k="match">Matching every title with Plex</li>
+    </ol>
+
+    <div id="review" hidden>
+      <h2 id="review-title">Ready to copy</h2>
+      <div id="review-out"></div>
+      <p class="sub">Safe by design: nothing watched in Jellyfin becomes unwatched, play counts only go up, and newer progress in Jellyfin is kept.</p>
+      <div class="actions"><button class="primary big" id="btn-apply">Copy my progress</button>
+        <button class="ghost" id="btn-pause" hidden>Pause</button></div>
+      <div class="bar" id="apply-bar" hidden><div class="fill"></div></div>
+      <p class="sub" id="apply-text" role="status"></p>
+    </div>
+  </section>
+
+  <!-- 4. Done ----------------------------------------------------------------------------------- -->
+  <section data-panel="done" hidden>
+    <div class="hero-ok"><span class="icon ok big" aria-hidden="true"></span><h1>You're all set</h1></div>
+    <p class="lead" id="done-summary"></p>
+    <div id="done-feature-results" role="status"></div>
+    <button id="manage-features">Add or manage features</button>
+    <div id="continue-wrap" hidden><h2>Pick up where you left off</h2><ul class="tiles" id="continue"></ul></div>
+    <div id="accounts" class="card soft" hidden></div>
+    <div class="card soft">
+      <h2>Watch on your TV and phone</h2>
+      <p>Install the free <strong>Jellyfin</strong> app from your TV's or phone's app store, then sign in with the same name and password. On the same Wi-Fi it finds this server automatically.</p>
+      <p class="sub">Use the server address from Open Jellyfin if your device does not find it automatically.</p>
+    </div>
+    <div class="card soft" id="keep-card" hidden>
+      <h2>Keep this app</h2>
+      <p>Add <strong>Orbital for Jellyfin</strong> to your Start menu to switch the look, manage sports, or undo later. No administrator prompt; remove it any time from Settings &gt; Apps.</p>
+      <div class="row"><button id="btn-keep">Keep it on this PC</button></div>
+      <p id="keep-out" role="status" class="sub"></p>
+    </div>
+    <div class="card soft" id="sources-card" hidden>
+      <h2>Where Sports gets its games</h2>
+      <p>Sports shows the games in your own TV guide. Connect a source for scores and more; each one uses your own account, and Orbital never charges for it.</p>
+      <label class="inline"><input type="checkbox" checked disabled> Your TV guide (always on)</label>
+      <label for="src-sportsdb">TheSportsDB key <span class="sub">(free or paid, from thesportsdb.com): schedules, scores, team badges</span></label>
+      <details><summary>Help me connect scores and team logos</summary>
+        <p>A sports source supplies schedules, scores and team badges. We do not include someone else's account or paid access.</p>
+        <ol><li>Open <a href="https://www.thesportsdb.com/docs/api" target="_blank" rel="noopener noreferrer">TheSportsDB's key and setup instructions</a>. Choose the access you need; provider plans may have their own fees.</li><li>Copy the key allowed for your use. Personal premium keys are on your provider profile. Treat your personal key like a password.</li><li>Paste it below, then press <strong>Save and check sources</strong>. We'll save it on your server and check today's schedule.</li></ol>
+        <p>A successful check can return zero games today. Team badges appear only when the source supplies them; an empty schedule cannot confirm badge coverage. If access fails, the result below explains what to fix.</p>
+        <p>You can skip this. Sports will use your TV guide, and you can connect a source later.</p>
+      </details>
+      <input id="src-sportsdb" autocomplete="off" spellcheck="false" placeholder="Not connected">
+      <label for="src-feed">Feed address <span class="sub">(Orbital Sports Feed format, for your own league or service)</span></label>
+      <input id="src-feed" type="url" autocomplete="off" spellcheck="false" placeholder="https://">
+      <label class="inline" for="src-espn"><input type="checkbox" id="src-espn"> Use ESPN's public data for the full Game Center, play trackers and box scores <span class="sub">(you're responsible for following ESPN's terms)</span></label>
+      <div class="row"><button id="btn-sources">Save and check sources</button><button id="btn-check-sources">Check connections again</button></div>
+      <p id="sources-out" role="status" class="sub"></p>
+      <h3>Add-ons</h3>
+      <p class="sub">Sources other people wrote and shared, for example on GitHub. Orbital doesn't write or check them: before one runs you'll see who wrote it and whose data it uses.</p>
+      <ul id="addon-list" class="addon-list"></ul>
+      <label for="addon-url">Add a source <span class="sub">(paste an add-on's address, or choose its file)</span></label>
+      <input id="addon-url" type="url" autocomplete="off" spellcheck="false" placeholder="https://github.com/…/addon.py">
+      <input id="addon-file" type="file" accept=".py">
+      <div class="row"><button id="btn-addon-check">Check it</button></div>
+      <div id="addon-confirm" class="confirm" hidden>
+        <p><strong id="ac-name"></strong> <span id="ac-version"></span><span class="sub" id="ac-author"></span></p>
+        <p id="ac-desc"></p>
+        <p class="sub" id="ac-provides"></p>
+        <p class="sub" id="ac-home-row" hidden><a id="ac-home" target="_blank" rel="noopener noreferrer">The add-on's page</a></p>
+        <label class="inline" for="ac-code"><input type="checkbox" id="ac-code"> <span id="ac-code-text"></span></label>
+        <label class="inline" for="ac-terms" id="ac-terms-row"><input type="checkbox" id="ac-terms"> <span id="ac-terms-text"></span></label>
+        <div class="row"><button id="btn-addon-add" disabled>Add it</button><button class="ghost" id="btn-addon-cancel">Cancel</button></div>
+      </div>
+      <p id="addon-out" role="status" class="sub"></p>
+    </div>
+    <details class="card"><summary>Free, and what's coming</summary>
+      <p>Everything you just set up is free and stays free: the move, the Orbital look, and sports from your TV guide plus any source you connect. When you watch a game on one of your channels, its tracker waits for your picture; press <strong>Sync</strong> once to line it up.</p>
+      <p class="sub">Coming later as Orbital Plus: a tracker that locks to your picture automatically, plays read straight from the score display on your screen (pitch by pitch, with the pitch type and speed when the network shows them), and channels checked against the actual picture with automatic switching. The first 25 founding households get Plus free. Nothing here asks for a card.</p>
+    </details>
+    <details class="card"><summary>Report, undo and privacy</summary>
+      <div class="row">
+        <button id="btn-report">Save a report</button>
+        <button id="btn-rollback">Undo the copied progress</button>
+        <button id="btn-orbital-off" hidden>Switch back to Jellyfin's standard look</button>
+        <button id="btn-sports-off" hidden>Remove sports</button>
+        <button id="btn-undo-setup">Remove what this app added</button>
+        <button id="btn-forget">Delete this app's data</button>
+      </div>
+      <p id="undo-out" role="status"></p>
+    </details>
+    <div class="card" id="open-ready">
+      <h2>Ready to open Jellyfin?</h2>
+      <p id="save-before-open">Save any changes above first. Use <strong>Save and check sources</strong> after entering a key or feed address. Open Jellyfin opens your server; it does not save this form.</p>
+      <p id="unsaved-notice" role="status" hidden>You have unsaved source settings. Save and check them before opening Jellyfin.</p>
+      <div class="actions"><a class="button primary big" id="open-jf" target="_blank" rel="noopener" aria-describedby="save-before-open unsaved-notice">Open Jellyfin</a></div>
+    </div>
+    <div class="actions"><button class="ghost" id="btn-quit">Close this app</button></div>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>

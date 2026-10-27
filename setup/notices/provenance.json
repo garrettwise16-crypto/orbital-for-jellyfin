@@ -1,0 +1,27 @@
+[
+  {
+    "file": "OpenSSL-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/openssl/openssl/openssl-3.0.16/LICENSE.txt",
+    "sha256": "7d5450cb2d142651b8afa315b5f238efc805dad827d91ba367d8516bc9d49e7a"
+  },
+  {
+    "file": "Expat-COPYING.txt",
+    "source": "https://raw.githubusercontent.com/libexpat/libexpat/R_2_7_1/COPYING",
+    "sha256": "31b15de82aa19a845156169a17a5488bf597e561b2c318d159ed583139b25e87"
+  },
+  {
+    "file": "zlib-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/madler/zlib/v1.3.1/LICENSE",
+    "sha256": "845efc77857d485d91fb3e0b884aaa929368c717ae8186b66fe1ed2495753243"
+  },
+  {
+    "file": "PyInstaller-COPYING.txt",
+    "source": "https://raw.githubusercontent.com/pyinstaller/pyinstaller/v6.11.1/COPYING.txt",
+    "sha256": "dcf75fdb959db1e3b41c0f8505069d2ece781b5ec6b3d0a4d30975cfc6580245"
+  },
+  {
+    "file": "SQLite-copyright.txt",
+    "source": "https://raw.githubusercontent.com/sqlite/sqlite/version-3.49.1/LICENSE.md",
+    "sha256": "a7a58d6022c090c528e3167026167b3141d682efc6a3c188b473ba59f1788fc7"
+  }
+]

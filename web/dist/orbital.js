@@ -3430,19 +3430,18 @@ if(typeof module!=='undefined')module.exports=global.OrbitalPersonal;
 'use strict';if(new URLSearchParams(location.search).get('orbital')==='off')return;
 let user=null,admin=false,busy=false,last=0;
 const make=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
-// Shown only when the server publishes a backfill snapshot; otherwise nothing appears and it rechecks every 5 minutes.
 async function refresh(force=false){
  const api=window.ApiClient,u=api?.getCurrentUserId?.();
  if(u!==user){user=u;admin=false;last=0;document.querySelectorAll('.orbital-backfill').forEach(n=>n.remove());if(u){try{admin=!!(await api.getCurrentUser()).Policy?.IsAdministrator;}catch{return;}}}
  if(!u||!admin||busy||document.hidden||!/^#\/(home|dashboard)(?:[?&]|$)/.test(location.hash)||(/^#\/home/.test(location.hash)&&new URLSearchParams(location.hash.split('?')[1]||'').get('tab')==='1'))return;
  const host=document.querySelector('.orbital-admin-tools');if(!host)return;
- let box=host.parentElement.querySelector('.orbital-backfill');if(Date.now()-last<(box?30000:300000)&&!force)return;
+ let box=host.parentElement.querySelector('.orbital-backfill');if(box&&Date.now()-last<30000&&!force)return;
+ if(!box){box=make('section','orbital-backfill orbital-personal');box.setAttribute('aria-label','Library backfill progress');host.after(box);box.append(make('p','','Loading library progress…'));}
  busy=true;
  try{
   const prefs=await api.ajax({type:'GET',url:api.getUrl('DisplayPreferences/orbital-backfill-progress',{userId:u,client:'orbital'}),dataType:'json'});
-  if(api.getCurrentUserId()!==u||box&&!box.isConnected)return;
+  if(api.getCurrentUserId()!==u||!box.isConnected)return;
   const d=JSON.parse(prefs.CustomPrefs?.progress||'null');if(!d?.overall)throw Error('No snapshot');
-  if(!box){box=make('section','orbital-backfill orbital-personal');box.setAttribute('aria-label','Library backfill progress');host.after(box);}
   const o=d.overall,head=make('div','orbital-backfill-heading');head.append(make('h2','','Library backfill'),make('strong','orbital-backfill-percent',o.percent+'% available'));
   const progress=make('progress');progress.max=o.total||1;progress.value=o.available;progress.setAttribute('aria-label','Backfill titles available in Jellyfin');
   const stats=make('div','orbital-backfill-stats');for(const [label,value] of [['Available in Jellyfin',o.available],['Submitted',o.submitted],['Waiting to submit',o.waiting_to_submit],['Needs attention',o.needs_attention]]){const cell=make('div');cell.append(make('strong','',Number(value).toLocaleString()),make('span','',label));stats.append(cell);}
@@ -3455,7 +3454,7 @@ async function refresh(force=false){
   }
   if(d.attention?.length){const details=make('details');details.append(make('summary','',d.attention.length+' titles need attention'));for(const e of d.attention){details.append(make('p','',e.title+' — '+e.reason));}box.append(details);}
   const b=make('button','orbital-chip','Refresh progress');b.type='button';b.onclick=()=>{last=0;refresh(true);};box.append(b);last=Date.now();
- }catch{box?.remove();last=Date.now();}
+ }catch{box.replaceChildren(make('h2','','Library backfill'),make('p','','Progress is temporarily unavailable. It will retry automatically.'));last=0;}
  finally{busy=false;}
 }
 setInterval(refresh,10000);window.addEventListener('hashchange',()=>setTimeout(refresh,500));document.addEventListener('visibilitychange',()=>refresh());refresh();
@@ -3488,7 +3487,7 @@ document.addEventListener('click',async e=>{
  try{const p=await read(api);if(api.getCurrentUserId()!==owner)throw Error();const rows=entries(p);const duplicate=rows.some(r=>r.channelId===b.dataset.channelId&&Date.now()-Date.parse(r.at)<300000);if(!duplicate){rows.push({id:crypto.randomUUID(),at:new Date().toISOString(),channelId:b.dataset.channelId,channel:String(b.dataset.channelName).slice(0,180),program:String(b.dataset.program||'').slice(0,200),status:'open'});p.CustomPrefs={...p.CustomPrefs,reports:JSON.stringify(rows.slice(-100))};await write(api,p);}status.textContent='Saved for the owner. You can choose another channel.';b.textContent='Reported — thank you';}
  catch{status.textContent='Could not send. Please try again when the connection returns.';b.disabled=false;}finally{sending=false;}
 });
-async function refresh(){const api=window.ApiClient,u=api?.getCurrentUserId?.();if(!u||owner==='-')return;
+async function refresh(){const api=window.ApiClient,u=api?.getCurrentUserId?.();if(!u)return;
  if(adminUser!==u){adminUser=u;admin=false;document.querySelectorAll('.simple-inbox').forEach(n=>n.remove());try{admin=!!(await api.getCurrentUser()).Policy?.IsAdministrator;}catch{return;}}
  if(!admin||!/^#\/(home|dashboard)(?:[?&]|$)/.test(location.hash)||busy)return;
  const host=document.querySelector('.orbital-admin-tools');if(!host)return;const old=host.querySelector('.simple-inbox');if(old&&(Date.now()-last<60000||old.contains(document.activeElement)))return;
@@ -8672,4 +8671,98 @@ html.orbital-live-single .headerTabs .emby-tab-button[data-index="0"],html.orbit
  const card=window.TelevisionBaseballCard;
  if(card&&typeof card.create==='function'){const prior=card.create;card.create=(data,options={})=>decorate(prior(data,options),data);}
  window.OrbitalBaseRunning={classify,play,inningEnd,graphic,decorate,caption};
+})();
+
+;
+/* Shared free-edition discovery and episode browsing. Uses only Jellyfin library/playback APIs. */
+(function(){
+ 'use strict';
+ if(window.OrbitalFreeExperience)return;
+ const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;};
+ const button=(text,fn,cls='ofx-button')=>{const b=make('button',cls,text);b.type='button';b.onclick=fn;return b;};
+ let dialog=null,opener=null,generation=0;
+ // Jellyfin's player consumes document clicks and keys; route owned controls first.
+ window.addEventListener('click',e=>{const b=e.target?.closest?.('.ofx-player-open,.ofx-start-over,.ofx-dialog button');if(!b||b.disabled||typeof b.onclick!=='function')return;e.preventDefault();e.stopImmediatePropagation();b.onclick(e);},true);
+ for(const type of ['keydown','keyup'])window.addEventListener(type,e=>{if(!dialog||!e.target?.closest?.('.ofx-dialog'))return;e.stopImmediatePropagation();if(e.key==='Escape'||e.key==='BrowserBack'){e.preventDefault();if(type==='keydown')close();}},true);
+ function close(){generation++;if(dialog){dialog.close();dialog.remove();dialog=null;}opener?.isConnected&&opener.focus();opener=null;}
+ function frame(title,description,from){
+  close();opener=from;const box=make('dialog','ofx-dialog');dialog=box;box.setAttribute('aria-label',title);
+  const head=make('header','ofx-head'),titles=make('div');titles.append(make('span','ofx-eyebrow','YOUR LIBRARY'),make('h2','',title),make('p','',description));head.append(titles,button('Close',close));box.append(head);
+  box.addEventListener('cancel',e=>{e.preventDefault();close();});box.addEventListener('keydown',e=>{if(e.key==='Escape'||e.key==='BrowserBack'){e.preventDefault();e.stopPropagation();close();}},true);
+  (document.fullscreenElement||document.body).append(box);box.showModal();return box;
+ }
+ const descriptions=['Recently added · not watched yet','Top-rated titles you have not seen','Unwatched comedies from your library','Real stories and new perspectives','Discover something from 1990–1999'];
+ function discovery(from,links){
+  const box=frame('What are you in the mood for?','Choose a starting point. You can refine the results next.',from),list=make('div','ofx-presets');
+  links.forEach((link,i)=>{const b=button('',()=>{const href=link.href;close();location.href=href;},'ofx-preset');b.append(make('span','ofx-number',String(i+1).padStart(2,'0')));const text=make('span');text.append(make('strong','',link.textContent),make('small','',descriptions[i]||''));b.append(text,make('span','ofx-arrow','›'));list.append(b);});box.append(list,make('p','ofx-foot','Back to close · Select to explore'));list.querySelector('button')?.focus();
+ }
+ function binding(){
+  const api=window.ApiClient,m=window.TelevisionPlayerBridge?.manager;if(!api||!m)return null;
+  try{const p=m.getCurrentPlayer(),item=m.currentItem(p);if(!p?.isLocalPlayer||item?.Type!=='Episode'||!item.SeriesId)return null;
+   return {api,m,p,item,key:JSON.stringify([api.serverId(),api.getCurrentUserId(),item.Id,m.playSessionId?.(p)])};}catch{return null;}
+ }
+ async function episodes(from){
+  const owner=binding();if(!owner)return;
+  const box=frame(owner.item.SeriesName||'Episodes','',from),ticket=generation;box.classList.add('ofx-episode-drawer');
+  const columns=make('div','ofx-columns'),seasons=make('select','ofx-seasons ofx-season-select'),list=make('div','ofx-episodes');seasons.setAttribute('aria-label','Seasons');list.setAttribute('aria-label','Episodes');columns.append(seasons,list);box.append(columns,make('p','ofx-foot','Select an episode to play · Back closes'));
+  let selection=0,busy=false;
+  const owns=()=>dialog===box&&ticket===generation&&binding()?.key===owner.key;
+  const get=(path,params)=>owner.api.ajax({type:'GET',url:owner.api.getUrl(path,{userId:owner.api.getCurrentUserId(),...params}),dataType:'json'});
+  const loading=message=>{list.replaceChildren(make('p','ofx-empty',message));list.setAttribute('aria-busy','true');};
+  const failure=(message,retry)=>{list.removeAttribute('aria-busy');list.replaceChildren(make('p','ofx-empty',message),button('Try again',retry));};
+  async function chooseSeason(season){
+   const pass=++selection;loading('Loading episodes…');seasons.value=season.Id;for(const b of seasons.children)b.setAttribute('aria-current',String(b.value===season.Id));
+   try{
+    const data=await get('Shows/'+encodeURIComponent(owner.item.SeriesId)+'/Episodes',{seasonId:season.Id,Fields:'Overview,PrimaryImageAspectRatio',EnableUserData:true});
+    if(!owns()||pass!==selection)return;
+    const rows=(data.Items||[]).slice().sort((a,b)=>(a.IndexNumber??0)-(b.IndexNumber??0));list.replaceChildren();list.removeAttribute('aria-busy');
+    if(!rows.length){list.append(make('p','ofx-empty','No episodes are available in this season.'));return;}
+    rows.forEach((item,index)=>{
+     const current=item.Id===owner.item.Id,available=item.LocationType!=='Virtual',position=item.UserData?.PlaybackPositionTicks||0;
+     const marker=current?'Now playing':!available?'Unavailable':item.UserData?.Played?'Watched':position>0?'In progress':'';
+     const name=(item.IndexNumber!=null?item.IndexNumber+'. ':'')+(item.Name||'Episode').replace(/^.*?\bS\d{1,3}E\d{1,3}\s*[-–:]\s*/i,'');
+     const row=button('',async()=>{
+      if(!owns()||busy||!available)return;if(current){close();return;}
+      const ids=rows.slice(index).filter(e=>e.LocationType!=='Virtual').map(e=>e.Id);busy=true;row.disabled=true;row.setAttribute('aria-busy','true');
+      try{await owner.m.play({ids,startPositionTicks:item.UserData?.Played?0:position,serverId:owner.api.serverId()});if(dialog===box)close();}
+      catch{if(dialog===box){busy=false;row.disabled=false;row.removeAttribute('aria-busy');const error=make('p','ofx-error','This episode could not start. Try again or choose another episode.');error.setAttribute('role','alert');box.querySelector('.ofx-error')?.remove();list.prepend(error);}}
+     },'ofx-episode');row.disabled=!available;row.setAttribute('aria-current',String(current));
+     if(item.ImageTags?.Primary){const image=make('img','ofx-still');image.alt='';image.loading='lazy';image.src=owner.api.getImageUrl(item.Id,{type:'Primary',tag:item.ImageTags.Primary,maxWidth:440});image.onerror=()=>image.remove();row.append(image);}else row.append(make('span','ofx-still ofx-placeholder',item.IndexNumber!=null?String(item.IndexNumber):'▶'));
+     const text=make('span','ofx-episode-copy');text.append(make('strong','',name),make('small','ofx-meta',[marker,item.RunTimeTicks?Math.round(item.RunTimeTicks/600000000)+' min':''].filter(Boolean).join(' · ')),make('span','ofx-summary',item.Overview||''));
+     if(position>0&&item.RunTimeTicks>0&&!item.UserData?.Played){const progress=make('progress');progress.max=item.RunTimeTicks;progress.value=Math.min(position,item.RunTimeTicks);progress.setAttribute('aria-label','Episode progress');text.append(progress);}
+     row.append(text);list.append(row);
+    });
+   }catch{if(owns()&&pass===selection)failure('Episodes could not load. Your video has not changed.',()=>chooseSeason(season));}
+  }
+  async function load(){loading('Loading seasons…');try{const data=await get('Shows/'+encodeURIComponent(owner.item.SeriesId)+'/Seasons',{});if(!owns())return;const rows=data.Items||[];
+   if(!rows.length){list.removeAttribute('aria-busy');list.replaceChildren(make('p','ofx-empty','No seasons are available for this show.'));return;}
+   seasons.replaceChildren();for(const season of rows){const b=make('option','ofx-season',season.IndexNumber===0?'Specials':season.Name||'Season '+(season.IndexNumber??0));b.value=season.Id;seasons.append(b);}seasons.onchange=()=>{const selected=rows.find(s=>s.Id===seasons.value);if(selected)chooseSeason(selected);};
+   const selected=rows.find(s=>s.Id===owner.item.SeasonId)||rows[0];await chooseSeason(selected);if(owns())seasons.focus();
+  }catch{if(owns())failure('Seasons could not load.',load);}}
+  await load();
+ }
+ function localVideo(){
+  const api=window.ApiClient,m=window.TelevisionPlayerBridge?.manager;if(!api||!m)return null;
+  try{const p=m.getCurrentPlayer(),item=m.currentItem(p),state=m.getPlayerState?.(p);
+   if(!p?.isLocalPlayer||!['Episode','Movie','Video'].includes(item?.Type)||item.IsLive||state?.PlayState?.CanSeek===false)return null;
+   return {m,p,item};}catch{return null;}
+ }
+ function seekBy(seconds){const b=localVideo();if(!b)return false;const ms=b.m.currentTime(b.p),duration=b.item.RunTimeTicks;
+  if(!Number.isFinite(ms)||typeof b.m.seek!=='function')return false;
+  const ticks=Math.max(0,Math.round((ms+seconds*1000)*10000));b.m.seek(duration?Math.min(ticks,duration-1):ticks,b.p);return true;
+ }
+ function startOver(){const b=localVideo();if(b&&typeof b.m.seek==='function')b.m.seek(0,b.p);}
+ window.addEventListener('keydown',e=>{
+  if(dialog||e.altKey||e.ctrlKey||e.metaKey||!['ArrowLeft','ArrowRight'].includes(e.key))return;
+  if(e.target?.closest?.('button,input,select,textarea,a,[role=button],[role=slider],[contenteditable=true]'))return;
+  const video=[...document.querySelectorAll('video')].find(v=>v.getClientRects().length&&v.readyState>=2);if(!video)return;
+  if(seekBy(e.key==='ArrowLeft'?-10:10)){e.preventDefault();e.stopImmediatePropagation();}
+ },true);
+ function update(){
+  for(const section of document.querySelectorAll('.oe-discover:not([data-ofx])')){const bar=section.querySelector('.oe-bar'),links=bar?[...bar.querySelectorAll('a')]:[];if(!links.length)continue;section.dataset.ofx='true';const open=button('Find your next watch',()=>discovery(open,links),'ob5-button ofx-discover-open');bar.replaceChildren(open);}
+  const owner=binding();document.querySelectorAll('.ofx-player-open').forEach(b=>{if(!owner)b.remove();});
+  const bottom=document.querySelector('.videoOsdBottom');const playable=localVideo();document.querySelectorAll('.ofx-start-over').forEach(b=>{if(!playable)b.remove();});if(playable&&bottom&&!bottom.querySelector('.ofx-start-over'))bottom.append(button('Start from beginning',startOver,'ofx-button ofx-start-over'));if(owner&&bottom&&!bottom.querySelector('.ofx-player-open')){const open=button('Episodes & seasons',()=>episodes(open),'ofx-button ofx-player-open');bottom.append(open);}
+ }
+ window.OrbitalFreeExperience={episodes,discovery,close,binding,seekBy,startOver};
+ setInterval(()=>{if(!document.hidden)update();},750);update();
 })();

@@ -1,0 +1,9 @@
+Orbital Setup
+Python 3.12.10: Python-LICENSE.txt (includes libffi, bzip2 and Microsoft runtime restrictions).
+OpenSSL 3.0.16, Expat 2.7.1, zlib 1.3.1, SQLite 3.49.1: accompanying notices.
+tzdata 2025.3: tzdata-LICENSE and tzdata-LICENSE_APACHE.
+PyInstaller: bootloader distribution exception in PyInstaller-COPYING.txt.
+The Orbital web source is distributed separately with its GPL-2.0 LICENSE.
+Jellyfin is downloaded separately from its publisher; its server binaries are not bundled.
+Provider content and team artwork are supplied by sources the administrator connects.
+These notices do not grant rights to third-party sports content or trademarks.

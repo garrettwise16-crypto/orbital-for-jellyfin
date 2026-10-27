@@ -17,7 +17,17 @@ Common combinations:
 - **The full experience:** web interface + sports-hub + team logos.
 - **Sports data for your own app or dashboard:** sports-hub alone. It's a plain JSON API that uses Jellyfin sign-ins.
 
-## Quick start
+## Guided setup
+
+**Orbital Setup is an interactive workflow**, for a new Jellyfin server or an existing one. It explains each action, runs selected installation steps, checks the result, and lets you retry a failed feature without starting over. Choose the web interface, Sports, or both; library setup and Plex migration are optional.
+
+The Windows preview can install Jellyfin through Windows Package Manager, then walk through the first administrator account, media folders, selected features, and your sports sources. Existing servers skip the server installer. Changes requiring a server restart are explained before applying them.
+
+On the final screen, choose **Save and check sources** before **Open Jellyfin**. Unsaved changes block opening Jellyfin and tell you what to save. A source that cannot answer is shown as a problem, not marked ready.
+
+Source and reproducible build instructions: [`setup/`](setup/). This preview has automated workflow and packaged-app checks; a clean Windows installation and administrator-prompt journey still need real-machine acceptance. Phone and TV source packages are not published here yet, so full native-client parity is not complete.
+
+## Manual quick start
 
 ```bash
 git clone https://github.com/garrettwise16-crypto/orbital-for-jellyfin.git
@@ -40,12 +50,12 @@ Reload Jellyfin in the browser. Remove the web interface any time with `--uninst
 
 ## What you set up yourself
 
-Some things can't be included in this repository, because they belong to someone else or need your own account. None of them is required, and none needs an API key.
+Some things can't be included in this repository, because they belong to someone else or need your own account. They are optional. Some providers require an API key or your agreement to their terms. The guided Sports plugin starts with your own guide and sources you explicitly connect.
 
 | Thing | Why it isn't included | What to do |
 |---|---|---|
 | Team logos | Trademarks of the leagues and teams | [Two commands](docs/LOGOS.md) link ESPN's logos from each viewer's browser |
-| Sports data | Belongs to the data provider | Nothing: sports-hub reads ESPN's public website data ([details and caveats](docs/DATA-SOURCES.md#espns-public-data)) |
+| Sports data | Belongs to the data provider | In guided setup, connect your chosen provider, feed, or opt-in source. The legacy Docker sports-hub reads ESPN public data; review its [details and caveats](docs/DATA-SOURCES.md#espns-public-data) before choosing that deployment. |
 | TV channels and guide | Need your own tuner or subscriptions | Set up Live TV in Jellyfin; a guide service such as Schedules Direct is optional ([how](docs/DATA-SOURCES.md#tv-channels-and-guide)) |
 | Antenna channels named by call sign | Only you know your local stations | One line in `sports-hub/.env` ([how](docs/DATA-SOURCES.md#matching-games-to-your-channels)) |
 
