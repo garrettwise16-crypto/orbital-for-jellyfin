@@ -443,6 +443,7 @@ $("btn-addon-add").addEventListener("click", (ev) => busy(ev.target, async () =>
 }));
 function setSourcesDirty(dirty) {
   S.sourcesDirty = dirty;
+  if (dirty) { artworkRun++; $("artwork-preview").hidden = true; }
   $("unsaved-notice").hidden = !dirty;
   $("btn-sources").textContent = dirty ? "Save and check sources — unsaved changes" : "Save and check sources";
 }
@@ -504,11 +505,35 @@ $("btn-integrations").addEventListener("click", ev => busy(ev.target, async () =
   } catch (e) { $("integrations-out").textContent="Not saved: "+e.message; }
   finally { ids.forEach(id => { $(id).disabled=false; }); }
 }));
+let artworkRun = 0;
+async function previewArtwork(result) {
+  const run = ++artworkRun, samples = result.artwork || [];
+  $("artwork-samples").replaceChildren(); $("artwork-preview").hidden = false;
+  $("artwork-status").textContent = samples.length ? "Loading a sample of your connected team logos…" :
+    result.teamEntries ? "Your source returned teams without usable logo links. Choose a source that includes team badges, then save and check again." :
+    "There are no teams to preview yet. Check again when your source has games; an empty schedule cannot confirm artwork.";
+  let loaded = 0;
+  await Promise.all(samples.map(sample => new Promise(resolve => {
+    const label = el("figcaption", {text:sample.name});
+    const image = el("img", {alt:sample.name, width:64, height:64, referrerpolicy:"no-referrer"});
+    $("artwork-samples").append(el("figure", {}, image, label));
+    let finished = false;
+    const finish = ok => { if (finished) return; finished=true;clearTimeout(timer); if (ok) loaded++;
+      else { image.hidden=true;label.textContent=sample.name+" — image unavailable"; } resolve(); };
+    const timer = setTimeout(() => finish(false), 8000);
+    image.addEventListener("load", () => finish(image.naturalWidth>0));image.addEventListener("error", () => finish(false));
+    try { const url=new URL(sample.url); if(url.protocol!=="https:" || url.username || url.password || url.hash) return finish(false);image.src=url.href; } catch (_) {finish(false);}
+  })));
+  if (run!==artworkRun || !samples.length) return;
+  $("artwork-status").textContent = `${loaded} of ${samples.length} sample logos loaded.` +
+    (loaded===samples.length ? " Your connected artwork is ready. This sample does not verify every team." : " Some images could not load. Check your connection or source and retry; scores can still work.");
+}
 async function checkSources() {
   await api("POST", "/api/sports/sources/check");
   const result = await waitJob(p => { $("sources-out").textContent = p.message || "Checking connections…"; });
   $("sources-out").replaceChildren(...(result.sources || []).map(row => el("p", {text:row.name + ": " + row.message})),
     el("p", {text:result.message || "No source health information was returned. Try again shortly."}));
+  await previewArtwork(result);
 }
 $("btn-check-sources").addEventListener("click", ev => busy(ev.target, checkSources));
 $("btn-sources").addEventListener("click", (ev) => busy(ev.target, async () => {

@@ -483,6 +483,13 @@ def normalize(raw, league):
     # Sept 29 polish (additive): record, short name, abbreviation and conference for board cards and the game header.
     for team, v in zip(teams, competitors):
         t = v.get('team') or {}
+        logo = t.get('logo') or next((x.get('href') for x in (t.get('logos') or []) if isinstance(x, dict) and x.get('href')), '')
+        try:
+            image = urlsplit(logo) if isinstance(logo, str) else None
+            if image and image.scheme == 'https' and image.hostname and not image.username and not image.password and not image.fragment and len(logo) <= 2048:
+                team['logo'] = logo
+        except ValueError:
+            pass
         record = next((r.get('summary') for r in (v.get('records') or []) if isinstance(r, dict) and r.get('type') in ('total', 'overall', None)), None)
         extra = {'record': record if isinstance(record, str) and re.fullmatch(r'[0-9]{1,3}(-[0-9]{1,3}){1,2}', record) else None,
                  'short': (t.get('shortDisplayName') or '')[:40] or None, 'abbr': (t.get('abbreviation') or '')[:8] or None,

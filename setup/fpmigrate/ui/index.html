@@ -258,12 +258,18 @@
         <p>A successful check can return zero games today. Team badges appear only when the source supplies them; an empty schedule cannot confirm badge coverage. If access fails, the result below explains what to fix.</p>
         <p>You can skip this. Sports will use your TV guide, and you can connect a source later.</p>
       </details>
-      <input id="src-sportsdb" autocomplete="off" spellcheck="false" placeholder="Not connected">
+      <input id="src-sportsdb" type="password" autocomplete="off" spellcheck="false" placeholder="Not connected">
       <label for="src-feed">Feed address <span class="sub">(Orbital Sports Feed format, for your own league or service)</span></label>
       <input id="src-feed" type="url" autocomplete="off" spellcheck="false" placeholder="https://">
-      <label class="inline" for="src-espn"><input type="checkbox" id="src-espn"> Use ESPN's public data for the full Game Center, play trackers and box scores <span class="sub">(you're responsible for following ESPN's terms)</span></label>
+      <label class="inline" for="src-espn"><input type="checkbox" id="src-espn"> Use ESPN's public data for scores, team logos, Game Center and play trackers <span class="sub">(you're responsible for following ESPN's terms)</span></label>
       <div class="row"><button id="btn-sources">Save and check sources</button><button id="btn-check-sources">Check connections again</button></div>
       <p id="sources-out" role="status" class="sub"></p>
+      <section id="artwork-preview" hidden aria-label="Your connected team artwork">
+        <h3>Your team logos</h3>
+        <p id="artwork-status" role="status"></p>
+        <div id="artwork-samples" class="artwork-samples"></div>
+        <p class="sub">These are real images from your saved source. Orbital uses that same source on web, Phone and TV. Missing images use team initials; no separate logo pack is required.</p>
+      </section>
       <h3>Add-ons</h3>
       <p class="sub">Sources other people wrote and shared, for example on GitHub. Orbital doesn't write or check them: before one runs you'll see who wrote it and whose data it uses.</p>
       <ul id="addon-list" class="addon-list"></ul>

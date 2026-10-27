@@ -18,6 +18,26 @@ class GuidedSetup(unittest.TestCase):
             self.assertIn(expected, result['sources'][0]['message'])
         jf.call.return_value = {'sources':[{'type':'feed','ok':True,'games':2,'teamEntries':4,'badgeLinks':3}]}
         self.assertIn('3 of 4', sports.check_sources(jf)['sources'][0]['message'])
+    def test_artwork_preview_uses_bounded_real_secure_source_images(self):
+        from fpmigrate import sports
+        jf=Mock()
+        teams=[{'name':'Team '+str(i),'logo':'https://images.example.test/'+str(i)+'.png'} for i in range(9)]
+        teams += [{'name':'Unsafe','logo':url} for url in ['http://images.example.test/a.png','https://user:pass@images.example.test/a.png','javascript:alert(1)','https://images.example.test/a.png#secret']]
+        jf.call.return_value={'sources':[{'type':'feed','ok':True}], 'events':[{'teams':teams}]}
+        result=sports.check_sources(jf)
+        self.assertEqual(len(result['artwork']),6)
+        self.assertEqual(result['teamEntries'],13)
+        self.assertTrue(all(x['name'].startswith('Team ') for x in result['artwork']))
+        jf.call.return_value={'sources':[], 'events':[]}
+        self.assertEqual(sports.check_sources(jf)['artwork'],[])
+
+    def test_scoreboard_keeps_provider_artwork(self):
+        import espn_core
+        raw={'id':'1','date':'2026-10-27T00:00:00Z','competitions':[{'competitors':[{'team':{'displayName':'Example','logo':'https://images.example.test/team.png'}}]}]}
+        self.assertEqual(espn_core.normalize(raw,'NBA')['teams'][0]['logo'],'https://images.example.test/team.png')
+        raw['competitions'][0]['competitors'][0]['team']['logo']='javascript:alert(1)'
+        self.assertNotIn('logo',espn_core.normalize(raw,'NBA')['teams'][0])
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.app = App(Path(self.tmp.name))

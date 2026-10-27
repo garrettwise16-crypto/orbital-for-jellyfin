@@ -48,6 +48,8 @@ ALLOW = [
 
 
 def allowed(rule, path, text):
+    # Negative artwork test rejects URL userinfo; reserved test domain and fake credential only.
+    if rule == 'email address' and path.as_posix() == 'setup/tests/test_guided_setup.py' and text == 'pass@images.example.test': return True
     # User-requested generic Live TV connectors: protocol names, never household providers.
     # Keep the exception scoped to these reviewed implementation/UI/test/docs files.
     live_tv_files = {'setup/fpmigrate/live_tv.py', 'setup/fpmigrate/ui/app.js',

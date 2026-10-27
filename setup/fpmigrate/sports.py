@@ -170,7 +170,20 @@ def check_sources(jf, progress=lambda message: None) -> dict:
                      "message": "Still loading; check again shortly." if pending else
                      (f"No source error reported; {int(item.get('games') or 0)} games returned." + badges if ok else
                       remedies.get(item.get('reason'), "The source could not answer. Check its key or address, then retry."))})
-    return {"ready": bool(rows) and all(r["ok"] for r in rows) and not warnings,
+    artwork = []
+    seen = set()
+    teams = [team for event in board.get("events", []) for team in event.get("teams", [])]
+    for team in teams:
+        url = str(team.get("logo") or "")
+        try:
+            parsed = urllib.parse.urlsplit(url)
+            valid = parsed.scheme == "https" and bool(parsed.hostname) and not parsed.username and not parsed.password and not parsed.fragment and len(url) <= 2048
+        except ValueError:
+            valid = False
+        if valid and url not in seen and len(artwork) < 6:
+            seen.add(url)
+            artwork.append({"name": str(team.get("name") or team.get("abbreviation") or "Team")[:100], "url": url})
+    return {"artwork": artwork, "teamEntries": len(teams), "ready": bool(rows) and all(r["ok"] for r in rows) and not warnings,
             "pending": pending, "sources": rows, "hasWarnings": bool(warnings),
             "message": "No source health information was returned. Try again shortly." if not rows else
                        "Some results are incomplete. Check your source settings and retry." if warnings else
