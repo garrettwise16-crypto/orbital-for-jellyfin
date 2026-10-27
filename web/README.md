@@ -8,7 +8,7 @@ This preview contains the readable JavaScript and CSS in `dist/` under GPL-2.0 (
 
 Configure the public sports-hub from this repository behind the same origin at `/sports/api/`, or use a compatible Sports plugin. The adapter probes its authenticated status endpoint. Without that service the ordinary media library still works and Sports navigation is hidden. Tracker responses with or without a game snapshot are supported. Missing optional services are answered locally as unavailable.
 
-Player tracking uses an estimated delay and manual adjustment. It does not read the video picture or establish broadcast synchronization. Missing geometry is not invented. Optional historical geometry providers are absent in this edition. The default personal-library service, catalogue, external requests and custom downloads are disabled.
+Game Center and other non-watched trackers request the latest reported state every second while visible, subject to source availability. They do not use the watched-video delay; animation durations and repeated-update deduplication are preserved. Player tracking for the game being watched uses an estimated delay and manual adjustment. It does not read the video picture or establish broadcast synchronization. Missing geometry is not invented. Optional historical geometry providers are absent in this edition. The default personal-library service, catalogue, external requests and custom downloads are disabled.
 
 ## Try it on a test Jellyfin installation
 
