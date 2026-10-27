@@ -14,11 +14,27 @@
   var me = document.currentScript && document.currentScript.src;
   var base = me ? new URL('./', me).pathname : '/web/orbital/';
   window.OrbitalAsset = base;
+  // Artwork is supplied by an administrator-connected source, not a bundled logo pack.
+  window.OrbitalArtwork = {
+    url: function (value) {
+      if (typeof value !== 'string' || !value || value.length > 2048) return '';
+      try {
+        var url = new URL(value, location.href);
+        if (url.username || url.password || url.hash) return '';
+        if (url.protocol !== 'https:' && !(url.origin === location.origin && url.protocol === 'http:')) return '';
+        return url.href;
+      } catch (_) { return ''; }
+    },
+    team: function (event, team) {
+      var old = window.OrbitalTeamArt && window.OrbitalTeamArt[event.league + '|' + team.name] || {};
+      return Object.assign({}, old, {url:this.url(team.logo) || this.url(old.url), abbr:team.abbreviation || team.abbr || old.abbr});
+    }
+  };
   window.OrbitalEdition = {
     edition: 'customer', layer: 'orbital-public-20261026',
     features: { sports: false, services: false, requests: false, downloads: false, experience: false, pictureLock: false }
   };
-  var SPORTS = /(^|\/)sports\/api\/(status|events|rankings|tracker|preview|recap|boxscore|pitch-flight|batter-profile|team-directory|team|teams|team-preferences|team-videos|team-hub|game-explorer|game\/[0-9]{1,12}\/state)$/;
+  var SPORTS = /(^|\/)sports\/api\/(status|catalogue|catalogues\/discover|events|rankings|tracker|preview|recap|boxscore|pitch-flight|batter-profile|team-directory|team|teams|team-preferences|team-videos|team-hub|game-explorer|game\/[0-9]{1,12}\/state)$/;
   var BLOCKED = /(^|\/)(sports\/api\/|cloud-download\/|simple\/|orbital\/requests\.html)/;
   var STATUS = /(^|\/)sports\/api\/status$/;
   function blocked(u) {
@@ -49,63 +65,76 @@
     if (blocked(url)) args[1] = base + '__unavailable__.json'; // missing file: Jellyfin answers 404 locally
     return open.apply(this, args);
   };
-  var root = document.documentElement, liveFor = null, sportsFor = null, SPORTS_KEY = 'fp-sports-on';
-  // Remembered from the last visit, so navigation built before the first check already includes Sports.
-  try {
-    if (localStorage.getItem(SPORTS_KEY) === '1') {
-      window.OrbitalEdition.features.sports = true;
-      root.classList.add('orbital-ce-sports');
-    }
-  } catch (e) { /* storage blocked: the check below still runs */ }
-  function remember(on) { try { on ? localStorage.setItem(SPORTS_KEY, '1') : localStorage.removeItem(SPORTS_KEY); } catch (e) {} }
-  // Live TV entry points stay hidden until this server actually has channels for the signed-in person.
+  var root = document.documentElement, owner = null, liveFor = null, sportsFor = null;
+  function current(o) {
+    var api = window.ApiClient;
+    return owner === o && api === o.api && api.getCurrentUserId() === o.user &&
+      api.serverId() === o.server && api.accessToken() === o.credential;
+  }
+  function publish(r) {
+    var features = window.OrbitalEdition.features, personal = !!(r && r.personal_library === true);
+    features.sports = !!(r && r.sports === true);
+    features.services = !!(r && r.services === true);
+    features.experience = personal;
+    features.requests = !!(r && r.requests === true && personal);
+    root.classList.toggle('orbital-ce-sports', features.sports);
+    root.classList.toggle('orbital-ce-services', features.services);
+    root.classList.toggle('orbital-ce-personal', personal);
+    root.classList.toggle('orbital-ce-requests', features.requests);
+    window.OrbitalConfig = window.OrbitalConfig || {};
+    window.OrbitalConfig.experienceService = personal;
+    window.OrbitalExperienceConfig = { enabled: personal };
+    window.OrbitalEdition.sports = features.sports ? {version:r.version,watchedGame:r.watched_game} : null;
+    window.dispatchEvent(new Event('orbital:features-changed'));
+  }
   root.classList.add('orbital-ce-no-livetv');
   function checks() {
     var api = window.ApiClient, uid = api && api.getCurrentUserId && api.getCurrentUserId();
-    if (!uid) return;
-    if (uid !== liveFor) {
-      liveFor = uid;
-      api.getJSON(api.getUrl('LiveTv/Channels', { UserId: uid, Limit: 1, EnableTotalRecordCount: true }))
-        .then(function (r) { root.classList.toggle('orbital-ce-no-livetv', !(r && r.TotalRecordCount > 0)); })
-        .catch(function () { root.classList.add('orbital-ce-no-livetv'); liveFor = null; });
+    if (!uid) {
+      if (owner) { owner = null; liveFor = sportsFor = null; publish(null); root.classList.add('orbital-ce-no-livetv'); }
+      return;
     }
-    if (uid !== sportsFor) {
-      sportsFor = uid;
+    if (!owner || !current(owner)) {
+      owner = {api:api,user:uid,server:api.serverId(),credential:api.accessToken()};
+      liveFor = sportsFor = null; publish(null); root.classList.add('orbital-ce-no-livetv');
+    }
+    var o = owner;
+    if (liveFor !== o) {
+      liveFor = o;
+      api.getJSON(api.getUrl('LiveTv/Channels', {UserId:uid,Limit:1,EnableTotalRecordCount:true}))
+        .then(function (r) { if(current(o)) root.classList.toggle('orbital-ce-no-livetv', !(r && r.TotalRecordCount > 0)); })
+        .catch(function () { if(current(o)) { root.classList.add('orbital-ce-no-livetv'); liveFor = null; } });
+    }
+    if (sportsFor !== o) {
+      sportsFor = o;
       api.getJSON(api.getUrl('sports/api/status'))
-        .then(function (r) {
-          var on = !!(r && r.sports === true);
-          window.OrbitalEdition.features.sports = on;
-          window.OrbitalEdition.features.services = !!(r && r.services);
-          root.classList.toggle('orbital-ce-services', window.OrbitalEdition.features.services);
-          var personal = !!(r && r.personal_library === true);
-          window.OrbitalEdition.features.experience = personal;
-          window.OrbitalEdition.features.requests = !!(r && r.requests === true && personal);
-          root.classList.toggle('orbital-ce-requests', window.OrbitalEdition.features.requests);
-          window.OrbitalConfig = window.OrbitalConfig || {};
-          window.OrbitalConfig.experienceService = personal;
-          window.OrbitalExperienceConfig = { enabled: personal };
-          root.classList.toggle('orbital-ce-personal', personal);
-          window.OrbitalEdition.sports = on ? { version: r.version, watchedGame: r.watched_game } : null;
-          root.classList.toggle('orbital-ce-sports', on);
-          remember(on);
-        })
-        .catch(function (e) {
-          if (e && e.status === 404) { remember(false); }
-          window.OrbitalEdition.features.sports = false;
-          window.OrbitalEdition.features.services = false;
-          root.classList.remove('orbital-ce-services');
-          window.OrbitalEdition.features.experience = false;
-          window.OrbitalEdition.features.requests = false;
-          root.classList.remove('orbital-ce-requests');
-          window.OrbitalExperienceConfig = { enabled: false };
-          root.classList.remove('orbital-ce-personal');
-          root.classList.remove('orbital-ce-sports');
-          // Starting up (503): look again shortly. Not installed (404): stay hidden until the next sign-in.
-          if (e && e.status === 503) sportsFor = null;
-        });
+        .then(function (r) { if(current(o)) publish(r); })
+        .catch(function (e) { if(current(o)) { publish(null); if(!e || e.status !== 404) sportsFor = null; } });
     }
   }
   setInterval(checks, 2000);
+
+  // Stock Jellyfin does not track a native-owned stream as its current web player.
+  // Before another explicit Play, wait for the plugin's exact previous lease to retire.
+  function installNativeRetirement(player) {
+    if (!player || player._orbitalPublicRetirement || typeof player.play !== 'function' || typeof player.stop !== 'function') return false;
+    var original = player.play, starting = false;
+    player.play = async function (options) {
+      if (starting) throw new Error('A playback request is already in progress.');
+      starting = true;
+      try {
+        if (this._lifecycle && !this._lifecycle.detached) await this.stop(true);
+        return await original.call(this, options);
+      } finally { starting = false; }
+    };
+    player._orbitalPublicRetirement = true;
+    return true;
+  }
+  var nativeTimer = setInterval(function () {
+    if (!window.NativePlayer || !window.ExoPlayer || !window.NativePlayer.getLifecycleProtocol) return;
+    if (installNativeRetirement(window.ExoPlayer)) clearInterval(nativeTimer);
+  }, 250);
+  setTimeout(function () { clearInterval(nativeTimer); }, 60000);
 
   // Basic player bridge. The owner's server patches Jellyfin's core bundle to hand the shell its player manager
   // (window.TelevisionPlayerBridge, with feed-switch and picture hooks). Customers run stock Jellyfin, so without
@@ -139,7 +168,7 @@
     if (window.TelevisionPlayerBridge) return true; // the full bridge is present: nothing to add
     if (!shell || !events || typeof events.on !== 'function' || !api) return false;
     var pm = findManager();
-    if (!pm) return true; // give up quietly: stock playback still works, Sports Watch stays a no-op
+    if (!pm) return false; // Retry while the stock player manager is still loading.
     var bridge = window.TelevisionPlayerBridge = { manager: pm, events: events, basic: true };
     var started = 0;
     events.on(pm, 'playbackstart', function (e, player) {
@@ -186,7 +215,11 @@
       if (!pick) return Promise.resolve();
       var dialog = document.querySelector('dialog[open]');
       if (dialog) { try { dialog.close(); } catch (err) {} }
-      return Promise.resolve(pm.play({ ids: [pick.id], serverId: api.serverId(), fullscreen: true }));
+      // Use the normal details route so Jellyfin mounts its video surface before autoplay.
+      // A direct manager.play call from Game Center can leave the app covering the video.
+      if (pm.getCurrentPlayer() && pm.currentItem(pm.getCurrentPlayer())) return Promise.reject(new Error('Stop the current playback before starting this game.'));
+      location.hash = '#/details?id=' + encodeURIComponent(pick.id) + '&serverId=' + encodeURIComponent(api.serverId()) + '&orbitalAutoplay=1';
+      return Promise.resolve();
     }
     shell.start = function (event, sourceId) { return open(event, sourceId || (event && event.preferredSource)); };
     shell.select = function (event, sourceId) { return open(event, sourceId); };

@@ -1,6 +1,8 @@
 services:
   sports-hub:
-    build: .
+    build:
+      context: ..
+      dockerfile: sports-hub/Dockerfile
     container_name: sports-hub
     restart: unless-stopped
     env_file: .env

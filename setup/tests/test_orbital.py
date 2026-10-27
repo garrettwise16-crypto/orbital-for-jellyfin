@@ -33,6 +33,7 @@ class OrbitalLayer(unittest.TestCase):
                           b"327c6584b367533841ce2b8d23e876734569a4a0fcac7031213e26cf494c66ff"):
             self.assertNotIn(household, blob)
         self.assertTrue(orbital.supported("12.0.0"))
+        self.assertTrue(orbital.supported("12.4.0"))
         self.assertFalse(orbital.supported("10.11.11"))
 
     def test_install_status_reinstall_remove_exact(self):

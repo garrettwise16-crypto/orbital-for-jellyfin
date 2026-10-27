@@ -30,6 +30,7 @@ async function busy(btn, fn) {
   try { return await fn(); } catch (e) { showError(e.message); } finally { btn.disabled = false; btn.removeAttribute("aria-busy"); if (btn.isConnected && btn.dataset.keep !== "1") btn.textContent = label; }
 }
 function go(step) {
+  if (step === "done") loadLiveTv().catch(e => { $("live-tv-out").textContent = e.message; });
   document.querySelectorAll("[data-panel]").forEach((s) => (s.hidden = s.dataset.panel !== step));
   let before = true;
   document.querySelectorAll("#steps li").forEach((li) => {
@@ -450,6 +451,13 @@ for (const id of ["src-sportsdb", "src-feed", "src-espn"]) {
   $(id).addEventListener("change", () => setSourcesDirty(true));
 }
 $("open-jf").addEventListener("click", ev => {
+  if (S.liveTVRunning || S.liveTVDirty) {
+    ev.preventDefault();
+    showError(S.liveTVRunning ? "Your Live TV source is still connecting. Wait for its saved confirmation." : "Your Live TV details are not saved. Test the connection, then choose Save and import channels, or clear the form.");
+    $("live-tv-form").open = true;
+    $(S.liveTVChecked ? "btn-live-tv-save" : "btn-live-tv-check").focus();
+    return;
+  }
   if (catalogueRunning) { ev.preventDefault(); showError("Your catalogues are still connecting. Wait for the result below before opening Jellyfin."); return; }
   if ($("catalogue-file").files.length) {
     ev.preventDefault();showError("Your catalogue has not been imported. Use Check and import catalogue first.");
@@ -677,6 +685,66 @@ $("btn-catalogue").addEventListener("click", ev => busy(ev.target, async () => {
   } catch(e) { $("catalogue-out").textContent="Not imported: "+e.message; }
 }));
 
+// Live TV uses Jellyfin itself, including installations without the Sports plugin.
+const liveTVFields = ["kind", "name", "url", "user", "password", "guide", "connections"];
+function liveTVBody() {
+  return Object.fromEntries(liveTVFields.map(k => [k === "user" ? "username" : k, $("live-tv-" + k).value]));
+}
+function liveTVType() {
+  const kind = $("live-tv-kind").value;
+  $("live-tv-login").hidden = kind !== "xtream";
+  $("live-tv-url-label").textContent = kind === "xtream" ? "Provider server address" : kind === "hdhomerun" ? "Tuner address on your home network" : "Playlist address";
+  $("live-tv-url").placeholder = kind === "m3u" ? "https://provider.example/playlist.m3u" : kind === "xtream" ? "https://provider.example:8080" : "http://192.0.2.100";
+  $("live-tv-guide-hint").textContent = kind === "xtream" ? "We will use your provider's guide automatically. Only fill this in if they gave you a different guide link." : "A guide adds programme names and schedules. Your provider can supply this link.";
+}
+async function loadLiveTv() {
+  const data = await api("GET", "/api/live-tv");
+  $("live-tv-sources").replaceChildren(...(data.sources.length ? data.sources.map(s => el("li", {text:s.name + " · " + (s.kind === "hdhomerun" ? "HDHomeRun" : "Playlist")})) : [el("li", {text:"No Live TV sources connected yet. This step is optional."})]));
+}
+for (const key of liveTVFields) $("live-tv-" + key).addEventListener("input", () => {
+  S.liveTVDirty = true; S.liveTVChecked = false;
+  $("btn-live-tv-save").disabled = true;
+  $("live-tv-out").textContent = "Unsaved changes. Test the connection, then save below.";
+  liveTVType();
+});
+function lockLiveTV(locked) {
+  S.liveTVRunning = locked;
+  for (const key of liveTVFields) $("live-tv-" + key).disabled = locked;
+  for (const key of ["check", "save", "clear"]) $("btn-live-tv-" + key).disabled = locked || (key === "save" && !S.liveTVChecked);
+}
+$("btn-live-tv-clear").addEventListener("click", () => {
+  showError("");
+  for (const key of ["url", "user", "password", "guide"]) $("live-tv-" + key).value = "";
+  S.liveTVDirty = false; S.liveTVChecked = false; lockLiveTV(false);
+  $("live-tv-out").textContent = "Form cleared. Saved sources remain connected.";
+});
+$("btn-live-tv-refresh").addEventListener("click", ev => busy(ev.target, loadLiveTv));
+$("btn-live-tv-check").addEventListener("click", async () => {
+  showError("");
+  lockLiveTV(true); S.liveTVChecked = false;
+  $("live-tv-out").textContent = "Reading the channel list and checking the guide. No video is opened…";
+  try {
+    const data = await api("POST", "/api/live-tv/check", liveTVBody());
+    S.liveTVChecked = true;
+    $("live-tv-out").textContent = `${data.at_least ? "At least " : ""}${n(data.channels, "channel", "channels")} found${data.guide_checked ? "; guide checked" : ""}. Ready to save. Choose Save and import channels below.`;
+  } catch(e) { $("live-tv-out").textContent = e.message; }
+  finally { lockLiveTV(false); }
+});
+$("btn-live-tv-save").addEventListener("click", async () => {
+  if (!S.liveTVChecked) return;
+  showError("");
+  lockLiveTV(true);
+  try {
+    await api("POST", "/api/live-tv/save", liveTVBody());
+    const result = await waitJob(p => { $("live-tv-out").textContent = p.message || "Connecting your Live TV source…"; });
+    S.liveTVDirty = false; S.liveTVChecked = false;
+    for (const key of ["url", "user", "password", "guide"]) $("live-tv-" + key).value = "";
+    $("live-tv-out").textContent = result.message + " You can now Open Jellyfin at the bottom of this page.";
+    await loadLiveTv();
+  } catch(e) { $("live-tv-out").textContent = e.message; await loadLiveTv().catch(() => {}); }
+  finally { lockLiveTV(false); }
+});
+
 let catalogueRunning = false;
 $("btn-connect-catalogue").addEventListener("click", ev => busy(ev.target, async () => {
   if (S.integrationsDirty) { $("btn-integrations").focus(); throw new Error("Save and check your Seerr connection above first."); }
@@ -689,3 +757,20 @@ $("btn-connect-catalogue").addEventListener("click", ev => busy(ev.target, async
   } catch(e) { $("catalogue-connect-out").textContent = "Needs attention: " + e.message + ". Previously saved catalogues remain available; retry this service when ready."; }
   finally { catalogueRunning = false; }
 }));
+
+// Account approvals remain with the user; no network change happens on page load.
+for (const button of document.querySelectorAll('[data-remote]')) button.addEventListener('click', async () => {
+  const controls=[...document.querySelectorAll('[data-remote]')]; controls.forEach(b=>b.disabled=true);
+  $('remote-out').textContent='Preparing your connection…'; $('remote-approve').hidden=true; $('remote-phone').hidden=true;
+  try {
+    let result=await api('POST','/api/remote-access',{action:button.dataset.remote,url:$('remote-url').value.trim()});
+    if(result.started) result=await waitJob(p=>{$('remote-out').textContent=p.message||'Setting up your connection…';});
+    $('remote-out').textContent=result.message;
+    if(result.approval_url){$('remote-approve').href=result.approval_url;$('remote-approve').hidden=false;$('remote-start').textContent='Continue after approval';}
+    if(result.url){$('remote-result').value=result.url;$('remote-phone').hidden=false;$('remote-qr').hidden=!result.qr;if(result.qr)$('remote-qr').src=result.qr;$('remote-start').textContent='Check connection again';}
+  } catch(e) { $('remote-out').textContent=e.message;$('remote-start').textContent='Try again'; }
+  finally { controls.forEach(b=>b.disabled=false); }
+});
+$('remote-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('remote-result').value);$('remote-out').textContent='Address copied. Paste it into the server field in Jellyfin or Orbital.';}catch{$('remote-result').select();$('remote-out').textContent='Select and copy the address above.';}});
+$('remote-confirm').addEventListener('click',()=>{$('remote-out').textContent='You confirmed playback works away from home. Keep the server computer on and Tailscale connected on your viewing device.';});
+$('remote-help').addEventListener('click',()=>{$('remote-out').textContent='Check that the server computer is on, Tailscale says Connected on both devices, and both use the same Tailscale account. Keep mobile data on. Try the address again; if it opens but playback fails, check the Jellyfin account has remote playback permission. You can return here without repeating installation.';});

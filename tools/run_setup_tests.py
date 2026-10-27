@@ -13,7 +13,7 @@ with tempfile.TemporaryDirectory(prefix='orbital-setup-tests-') as temp:
     payload = Path(temp)
     web = payload / 'fpmigrate/orbital_layer'
     web.mkdir(parents=True)
-    manifest = {'layer': 'orbital-public', 'edition': 'customer', 'supportedJellyfin': ['12.0', '12.2'], 'files': {}}
+    manifest = {'layer': 'orbital-public', 'edition': 'customer', 'supportedJellyfin': ['12.0', '12.2', '12.4'], 'files': {}}
     entries = [line.split() for line in (ROOT / 'web/SHA256SUMS').read_text().splitlines()]
     for name in ('LICENSE', 'README.md'):
         entries.append([hashlib.sha256((ROOT / 'web' / name).read_bytes()).hexdigest(), name])

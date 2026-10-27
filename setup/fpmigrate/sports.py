@@ -211,6 +211,16 @@ def status(jf) -> dict:
            "state": entry and entry.get("Status")}
     if entry and entry.get("Status") == "Active":
         out["service"] = service_status(jf)
+    elif not entry:
+        # An authenticated standalone backend provides the same features without
+        # installing a second service or restarting the administrator's server.
+        try:
+            remote = jf.call("GET", "/sports/api/status", timeout=8, retries=0)
+            if remote.get("edition") == "customer" and str(remote.get("version", "")).startswith("sports-ce-"):
+                out.update(installed=True, state="Active", version=remote["version"],
+                           deployment="standalone", service={"ready": True, **remote})
+        except (HttpError, ValueError, OSError):
+            pass
     return out
 
 

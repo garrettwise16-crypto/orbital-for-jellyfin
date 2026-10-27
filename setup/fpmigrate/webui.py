@@ -348,6 +348,55 @@ class App:
             raise ValueError("Another setup step is running. Wait for it to finish.")
         return {'started': True}
 
+    def remote_access(self, _q, body):
+        from . import remote_access
+        jf = self.engine.jf
+        if not jf:
+            raise ValueError('Connect Jellyfin first.')
+        if not jf.call('GET', '/Users/Me').get('Policy', {}).get('IsAdministrator'):
+            raise ValueError('Sign in as a Jellyfin administrator to configure remote access.')
+        action = (body or {}).get('action', 'status')
+        if action == 'status':
+            return remote_access.status(jf)
+        if action == 'verify':
+            return remote_access.verify(jf, (body or {}).get('url', ''))
+        if action not in ('install', 'enable', 'advance'):
+            raise ValueError('Unknown remote access step.')
+        token = jf.token
+        def progress(message):
+            if self.engine.jf is not jf or jf.token != token:
+                raise Cancelled()
+            self.engine._p('remote-access', message=message)
+        if not self.job.start('remote-access', lambda: getattr(remote_access, action)(jf, progress)):
+            raise ValueError('Another setup step is running. Wait for it to finish.')
+        return {'started': True}
+
+    def live_tv_status(self, _q, _b):
+        from . import live_tv
+        if not self.engine.jf:
+            raise ValueError("Connect Jellyfin first.")
+        return live_tv.status(self.engine.jf)
+
+    def live_tv_check(self, _q, body):
+        from . import live_tv
+        if not self.engine.jf:
+            raise ValueError("Connect Jellyfin first.")
+        return live_tv.check(body or {})
+
+    def live_tv_save(self, _q, body):
+        from . import live_tv
+        jf = self.engine.jf
+        if not jf:
+            raise ValueError("Connect Jellyfin first.")
+        token = jf.token
+        def progress(message):
+            if self.engine.jf is not jf or jf.token != token:
+                raise Cancelled()
+            self.engine._p('live-tv', message=message)
+        if not self.job.start('live-tv', lambda: live_tv.save(jf, body or {}, progress)):
+            raise ValueError("Another setup step is running. Wait for it to finish.")
+        return {'started': True}
+
     def integrations_get(self, _q, _b):
         if not self.engine.jf:
             raise ValueError("Connect Jellyfin first.")
@@ -452,6 +501,9 @@ class App:
         ("POST", "/api/catalogues/import"): "catalogues_import",
         ("POST", "/api/catalogues/connect"): "catalogues_connect",
         ("GET", "/api/integrations"): "integrations_get", ("POST", "/api/integrations"): "integrations_set",
+        ("GET", "/api/live-tv"): "live_tv_status", ("POST", "/api/live-tv/check"): "live_tv_check",
+        ("POST", "/api/live-tv/save"): "live_tv_save",
+        ("POST", "/api/remote-access"): "remote_access",
         ("POST", "/api/preview"): "preview", ("POST", "/api/apply"): "apply", ("POST", "/api/cancel"): "cancel",
         ("POST", "/api/rollback"): "rollback", ("POST", "/api/undo-setup"): "undo_setup",
         ("GET", "/api/report"): "report", ("POST", "/api/forget"): "forget", ("POST", "/api/quit"): "quit",

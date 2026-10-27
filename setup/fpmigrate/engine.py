@@ -435,8 +435,14 @@ class Engine:
         if not sports.available():
             return {"available": False, "reason": "Sports isn't included in this download."}
         version = self.jf_info.get("Version") or ""
-        if not version.startswith(("12.0", "12.1", "12.2")):  # verified on native Windows, Oct 22
+        if ".".join(version.split(".")[:2]) not in ("12.0", "12.1", "12.2", "12.4"):  # verified on native Windows
             return {"available": False, "reason": f"Sports isn't tested with Jellyfin {version} yet."}
+        try:
+            current = sports.status(self.jf)
+        except HttpError:
+            current = {}
+        if current.get("deployment") == "standalone":
+            return {"available": True, **current}
         external = os.environ.get("FPMIGRATE_SPORTS_SERVICE_URL")
         if not external and urlparse(self.jf.base_url).hostname not in ("localhost", "127.0.0.1", "::1"):
             return {"available": False, "reason": "Run this setup app on the Jellyfin computer to add Sports automatically."}
@@ -458,6 +464,8 @@ class Engine:
         st = self.sports_status()
         if not st["available"]:
             raise RuntimeError(st["reason"])
+        if st.get("deployment") == "standalone":
+            return {"installed": True, "changed": False, "deployment": "standalone", "service": st["service"]}
         result = sports.install(self.jf, repo_host=os.environ.get("FPMIGRATE_SPORTS_REPO_HOST", "127.0.0.1"),
                                 repo_advertise=os.environ.get("FPMIGRATE_SPORTS_REPO_HOST"),
                                 progress=lambda m: self._p("libraries", 0, 0, m))

@@ -1746,9 +1746,9 @@ window.OrbitalExperienceConfig={enabled:!!(window.OrbitalConfig&&window.OrbitalC
       const controller = new AbortController(); this.pending.add(controller);
       const timeout = setTimeout(() => controller.abort(), 12000);
       try {
-        const response = await this.transport(PREFIX + route, {
+        const response = await this.transport(this.api.getUrl(PREFIX.slice(1) + route), {
           method: data === undefined ? 'GET' : 'POST', credentials: 'same-origin', cache: 'no-store',
-          headers: {'X-Emby-Token': credential, ...(data === undefined ? {} : {'Content-Type': 'application/json'})},
+          headers: {'Authorization': 'MediaBrowser Token='+JSON.stringify(credential), ...(data === undefined ? {} : {'Content-Type': 'application/json'})},
           body: data === undefined ? undefined : JSON.stringify(data), signal: controller.signal,
         });
         const result = await response.json();
@@ -3058,7 +3058,7 @@ if(typeof module!=='undefined')module.exports=global.OrbitalPersonal;
         if(button.getAttribute('aria-busy')==='true')return;button.setAttribute('aria-busy','true');button.disabled=true;
         let note=el('p','orbital-backfill-note orbital-download-note','Preparing secure download…');note.setAttribute('role','status');buttons.after(note);
         try{
-          const response=await fetch('/cloud-download/session',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Emby-Token':api.accessToken()},body:JSON.stringify({itemId:item.Id})});
+          const response=await fetch('/cloud-download/session',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Authorization':'MediaBrowser Token='+JSON.stringify(api.accessToken())},body:JSON.stringify({itemId:item.Id})});
           if(!response.ok)throw new Error('download session '+response.status);const result=await response.json();
           if(!/^\/cloud-download\/file\/[0-9a-f]{32}$/i.test(result.url||''))throw new Error('unexpected download route');
           const anchor=el('a');anchor.href=result.url;anchor.download='';anchor.hidden=true;anchor.referrerPolicy='no-referrer';document.body.append(anchor);anchor.click();anchor.remove();
@@ -3345,6 +3345,8 @@ if(typeof module!=='undefined')module.exports=global.OrbitalPersonal;
     const api=window.ApiClient,route=location.hash;if(!/^#\/details\?/.test(route)){cancelAutoplay();return;}
     const params=new URLSearchParams(route.split('?')[1]||''),id=params.get('id');if(!id||params.get('orbitalAutoplay')!=='1'){cancelAutoplay();return;}
     let server,credential;try{server=api?.serverId?.();credential=api?.accessToken?.();if(!api||api.getCurrentUserId()!==user||params.get('serverId')&&params.get('serverId')!==server){cancelAutoplay();return;}}catch{cancelAutoplay();return;}
+    const consumed=state.stockAutoplayConsumed;
+    if(consumed?.api===api&&consumed.user===user&&consumed.server===server&&consumed.credential===credential&&consumed.route===route){cancelAutoplay();return;}
     let request=state.autoplayRequest;
     if(!request||request.api!==api||request.user!==user||request.server!==server||request.credential!==credential||request.route!==route){
       cancelAutoplay();request={api,user,server,credential,route,id,attempts:0,timer:null,observer:null,watchPage:null,consume:null};state.autoplayRequest=request;
@@ -3355,7 +3357,8 @@ if(typeof module!=='undefined')module.exports=global.OrbitalPersonal;
       if(!button?.isConnected||!page?.isConnected||button.disabled||button.getAttribute('aria-disabled')==='true'||!button.getClientRects().length)return null;
       const style=getComputedStyle(button);if(style.display==='none'||style.visibility==='hidden')return null;
       if(owner?.api!==api||owner.user!==user||owner.server!==server||owner.credential!==credential||owner.route!==route||owner.page!==page||!owner.current?.())return null;
-      if(!manual&&(owner.autoplayItemId!==id||typeof page.orbitalAutoplayItemMatches!=='function'||!page.orbitalAutoplayItemMatches(api,user,id,route))||page.dataset.pageReadyRoute!==route||page.dataset.pageReadyUser!==user)return null;
+      const stock=window.OrbitalEdition?.edition==='customer'&&window.TelevisionPlayerBridge?.basic;
+      if(!manual&&(owner.autoplayItemId!==id||(stock?page.dataset.phase!=='complete':typeof page.orbitalAutoplayItemMatches!=='function'||!page.orbitalAutoplayItemMatches(api,user,id,route)))||page.dataset.pageReadyRoute!==route||page.dataset.pageReadyUser!==user)return null;
       return button;
     };
     request.consume=(button,manual=false)=>{if(!button||!current()||ready(manual)!==button)return false;params.delete('orbitalAutoplay');cancelAutoplay();history.replaceState(history.state,'',location.pathname+location.search+'#/details?'+params.toString());return true;};
@@ -3371,7 +3374,14 @@ if(typeof module!=='undefined')module.exports=global.OrbitalPersonal;
     request.attempts++;request.timer=setTimeout(()=>{
       request.timer=null;if(!current()){if(state.autoplayRequest===request)cancelAutoplay();return;}
       if(ready()!==button){if(request.attempts<3)schedule();else request.observer?.disconnect();return;}
-      if(request.consume(button))button.click();
+      if(request.consume(button)){
+        if(window.OrbitalEdition?.edition==='customer'&&window.TelevisionPlayerBridge?.basic){
+          state.stockAutoplayConsumed={api,user,server,credential,route};
+          // Stock Jellyfin has no private item-page hook. Play the API-confirmed exact ID,
+          // after the details surface is ready, instead of trusting a stale button binding.
+          Promise.resolve(window.TelevisionPlayerBridge.manager.play({ids:[id],serverId:server,fullscreen:true})).catch(()=>{});
+        }else button.click();
+      }
     },80);
   }
   async function enhance(){
@@ -3427,7 +3437,7 @@ if(typeof module!=='undefined')module.exports=global.OrbitalPersonal;
 })();
 /* Administrator-only backfill dashboard; server publishes aggregate snapshots. */
 (()=>{
-'use strict';if(new URLSearchParams(location.search).get('orbital')==='off')return;
+'use strict';if(window.OrbitalEdition?.edition==='customer')return;if(new URLSearchParams(location.search).get('orbital')==='off')return;
 let user=null,admin=false,busy=false,last=0;
 const make=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 async function refresh(force=false){
@@ -3650,7 +3660,7 @@ window.OrbitalTeamArt=window.OrbitalTeamArt||{};
       if(animate&&art.firstElementChild){picture.classList.add('ob5-feature-incoming');const old=[...art.children];art.append(picture);const settle=()=>{picture.classList.remove('ob5-feature-incoming');setTimeout(()=>old.forEach(n=>n.remove()),420);};picture.decode?.().then(settle,settle)??settle();}
       else art.replaceChildren(picture);
       const hadFocus=content.contains(document.activeElement)?[...content.querySelectorAll('a,button')].indexOf(document.activeElement):-1;
-      content.replaceChildren(node('span','ob5-eyebrow',item.HeroReason||eyebrow||(mode==='tv'?'FROM YOUR SERIES LIBRARY':'FROM YOUR MOVIE LIBRARY')),node('h1','',clean(item.Name)),node('p','ob5-feature-meta',[item.ProductionYear,item.OfficialRating,OrbitalRating.label(item),...(item.Genres||[]).slice(0,2)].filter(Boolean).join(' · ')),node('p','ob5-overview',String(item.Overview||'').replace(/<[^>]*>/g,'').slice(0,230)),a(item.Type==='Movie'||item.Type==='Episode'?'Play':'Explore title',details(api,item)+(item.Type==='Movie'||item.Type==='Episode'?'&orbitalAutoplay=1':''),'ob5-button ob5-primary'),a('Details',details(api,item),'ob5-button'));
+      content.replaceChildren(node('span','ob5-eyebrow',item.HeroReason||eyebrow||((mode==='tv'||item.Type==='Series')?'FROM YOUR SERIES LIBRARY':'FROM YOUR MOVIE LIBRARY')),node('h1','',clean(item.Name)),node('p','ob5-feature-meta',[item.ProductionYear,item.OfficialRating,OrbitalRating.label(item),...(item.Genres||[]).slice(0,2)].filter(Boolean).join(' · ')),node('p','ob5-overview',String(item.Overview||'').replace(/<[^>]*>/g,'').slice(0,230)),a(item.Type==='Movie'||item.Type==='Episode'?'Play':'Explore title',details(api,item)+(item.Type==='Movie'||item.Type==='Episode'?'&orbitalAutoplay=1':''),'ob5-button ob5-primary'),a('Details',details(api,item),'ob5-button'));
       if(item.ImageTags?.Logo){const heading=content.querySelector('h1');const logo=img(api.getImageUrl(item.HeroArtId||item.Id,{type:'Logo',tag:item.ImageTags.Logo,maxWidth:900,quality:90}),'ob5-title-logo',clean(item.Name));logo.loading='eager';logo.onload=()=>{if(heading.isConnected&&logo.naturalWidth>0)heading.replaceChildren(logo);};logo.onerror=()=>{};if(logo.complete&&logo.naturalWidth>0)heading.replaceChildren(logo);}
       if(animate){content.classList.remove('ob5-feature-fade');void content.offsetWidth;content.classList.add('ob5-feature-fade');}
       if(hadFocus>=0)content.querySelectorAll('a,button')[hadFocus]?.focus({preventScroll:true});
@@ -3700,6 +3710,13 @@ window.OrbitalTeamArt=window.OrbitalTeamArt||{};
   }
   function navigation(views) {
     let nav=document.querySelector('#ob5-navigation');
+    const capabilities=JSON.stringify([views.map(v=>[v.Id,v.CollectionType]),window.OrbitalEdition?.features]);
+    let restoreFocus=null;
+    if(nav&&nav.dataset.capabilities!==capabilities){
+      const focused=document.activeElement,top=document.querySelector('#ob21-top-navigation');
+      if(nav.contains(focused)||top?.contains(focused))restoreFocus={href:focused.closest?.('a')?.getAttribute('href'),top:!!top?.contains(focused)};
+      nav.remove();top?.remove();nav=null;
+    }
     if(!nav){nav=node('nav','ob5-navigation');nav.id='ob5-navigation';nav.setAttribute('aria-label','Navigation');
 
       const main=node('div','ob5-main-nav');
@@ -3716,6 +3733,7 @@ window.OrbitalTeamArt=window.OrbitalTeamArt||{};
       nav.addEventListener('click',event=>{const link=event.target.closest?.('a');if(link&&new URL(link.href,location.href).origin===location.origin)beginBrowseTransition(new URL(link.href,location.href).hash);if(link)setNavigationOpen(false,false);},true);
       document.body.append(nav);
     }
+    nav.dataset.capabilities=capabilities;
     ensureNavigationChrome(nav);
     // Reuse the account-filtered destinations; no extra catalog requests or invented actions.
     let top=document.querySelector('#ob21-top-navigation');
@@ -3730,6 +3748,7 @@ window.OrbitalTeamArt=window.OrbitalTeamArt||{};
       top.addEventListener('click',event=>{const link=event.target.closest?.('a');if(link)beginBrowseTransition(new URL(link.href,location.href).hash);},true);
       document.body.append(top);
     }
+    if(restoreFocus?.href){[...(restoreFocus.top?top:nav).querySelectorAll('a')].find(a=>a.getAttribute('href')===restoreFocus.href)?.focus({preventScroll:true});}
     document.documentElement.classList.add('ob5-shell');
     const {path,q}=route();for(const l of nav.querySelectorAll('a')){const dest=new URL(l.href);const [p,s='']=dest.hash.slice(1).split('?'),dq=new URLSearchParams(s);const teamPage=path==='/movies'&&String(q.get('orbitalBrowse')||'').startsWith('team:');const selected=teamPage?dest.origin===location.origin&&p==='/livetv'&&dq.get('sports')==='1':dest.origin===location.origin&&p===path&&(p!='/home'||dq.get('tab')===q.get('tab'))&&(p!='/movies'&&p!='/tv'||dq.get('topParentId')===q.get('topParentId')&&(dq.get('orbitalBrowse')||'')===(q.get('orbitalBrowse')||''))&&(p!='/livetv'||(dq.get('tab')||'0')===(q.get('tab')||'0')&&(dq.get('sports')==='1')===(q.get('sports')==='1'));if(selected)l.setAttribute('aria-current','page');else l.removeAttribute('aria-current');}
     for(const l of top.querySelectorAll('a')){const match=[...nav.querySelectorAll('a')].find(n=>n.getAttribute('href')===l.getAttribute('href'));if(match?.hasAttribute('aria-current'))l.setAttribute('aria-current','page');else l.removeAttribute('aria-current');}
@@ -3747,8 +3766,8 @@ window.OrbitalTeamArt=window.OrbitalTeamArt||{};
 
     // Keep the first wave small. Hero and recent titles are enough to make Home useful while
     // personalization and the larger discovery surface continue without blocking the page.
-    const latestPromise=catalog(api,user,{...query,SortBy:'DateCreated',SortOrder:'Descending'});
-    const heroPromise=catalog(api,user,{...query,MinCommunityRating:6.5,ImageTypes:'Backdrop',SortBy:'CommunityRating,DateCreated',SortOrder:'Descending'});
+    const latestPromise=catalog(api,user,{IncludeItemTypes:'Movie,Series',SortBy:'DateCreated',SortOrder:'Descending'});
+    const heroPromise=catalog(api,user,{IncludeItemTypes:'Movie,Series',MinCommunityRating:6.5,ImageTypes:'Backdrop',SortBy:'CommunityRating,DateCreated',SortOrder:'Descending'});
     const nextPromise=fetchJson(api,'Shows/NextUp',{UserId:user,Limit:80,EnableResumable:true,EnableRewatching:false,Fields:'Overview,ProviderIds,Genres,Path,Tags'});
     const resumePromise=fetchJson(api,'Users/'+user+'/Items/Resume',{Limit:100,MediaTypes:'Video',Fields:'Overview,ProviderIds,Genres,Path,Tags'});
     // Discover the same first hero as feature() while personal rows settle.
@@ -4820,6 +4839,7 @@ window.OrbitalTeamArt=window.OrbitalTeamArt||{};
     const previousShelf=title=>oldShelves.find(n=>n.getAttribute('aria-label')===title);
     const homeShelf=(title,items,options={})=>previousShelf(title)||shelf(api,title,items,options);
     const root=node('div','ob5-browse');root.dataset.mode=mode;
+    if(!['top','latest','continue','series','channels','events','favorites','feature'].some(k=>data[k]?.length)){const empty=node('section','ob5-shelf');empty.append(node('h1','',mode==='home'?'Welcome to Orbital':'No titles yet'),node('p','','Add your media folders in Orbital Setup and scan the library. Your titles will appear here when they are ready.'));if(window.OrbitalEdition?.features?.sports)empty.append(a('Explore Sports','#/livetv?tab=0&sports=1','ob5-button'));root.append(empty);return root;}
     if(mode!=='home'){const h=node('div','ob5-page-heading');h.append(node('h1','',mode==='tv'?'TV Shows':'Movies'));const q=route().q;q.set('orbitalBrowse','all');h.append(a('Browse all · Sort & filter','#/'+(mode==='tv'?'tv':'movies')+'?'+q,'ob5-button'));root.append(h);}
     const append=n=>{if(n)root.append(n);};append(previous?.querySelector(':scope > .ob5-feature')||feature(api,data.hero||[],mode));
     if(mode==='home'){append(homeShelf('Continue Watching',data.continue,{wide:true}));if(S.views.some(v=>v.CollectionType==='livetv'))append(previousShelf('Your teams')||teamCorner(api,S.user));append(liveGames(api,data.events)||live(api,data.channels));append(servicesRow());append(homeShelf('My List',data.favorites.slice(0,18),{href:'#/movies?orbitalBrowse=mylist'}));append(homeShelf(data.because.title,data.because.items.slice(0,18)));append(homeShelf('Series worth starting',data.series.slice(0,18)));}
@@ -4883,7 +4903,7 @@ window.OrbitalTeamArt=window.OrbitalTeamArt||{};
     const personalReady=window.OrbitalPersonal?.prepare(api);
     try {
       if(!S.views.length){if(S.pending==='views')return;acquire('views');const views=await api.getUserViews({},user);if(window.ApiClient!==api||S.user!==user||api.getCurrentUserId()!==user||api.accessToken?.()!==credential||api.serverId?.()!==server||location.hash!==invocationRoute)return;S.views=views.Items||[];release();}
-      if(!S.views.length){if(window.OrbitalPageReady?.managed())void window.OrbitalPageReady.fail('No libraries are available for this account. Retry after checking access.',pageTicket);return;}
+      if(!S.views.length&&route().path!=='/home'){if(window.OrbitalPageReady?.managed())void window.OrbitalPageReady.fail('No libraries are available for this account. Retry after checking access.',pageTicket);return;}
       navigation(S.views);if(location.hash.startsWith('#/mypreferenceshome')){const host=document.querySelector('.page:not(.hide) form,.page:not(.hide) .readOnlyContent');if(host&&!host.querySelector('.ob5-settings-scope'))host.prepend(node('p','ob5-settings-scope','These section selectors configure Standard Jellyfin Home. For Orbital, use Customize Home at the bottom of Home.'));}
       const {path,q}=route(),mode=path==='/home'&&q.get('tab')!=='1'?'home':path==='/movies'?'movies':path==='/tv'?'tv':null;
       document.documentElement.classList.toggle('ob5-player-route',/video|player/i.test(path));
@@ -4925,12 +4945,12 @@ window.OrbitalTeamArt=window.OrbitalTeamArt||{};
       // while their optional background discovery completes.
       let data=S.cache.get(key);if(!data){const preview=!existing?value=>{Promise.resolve(personalReady).then(()=>mount(value,'preview')).catch(()=>{});}:null;data={value:await Promise.all([content(api,user,mode,q.get('topParentId'),preview),personalReady]).then(values=>values[0]),time:Date.now()};if(window.ApiClient!==api||api.getCurrentUserId()!==user||api.accessToken?.()!==credential||api.serverId?.()!==server||location.hash!==invocationRoute)return;S.cache.set(key,data);}
       const now=route();if(serial!==S.serial||S.user!==user||now.path!==path||now.q.get('topParentId')!==q.get('topParentId')||!host.isConnected)return;
-      if(!data.value.top.length&&!data.value.latest.length&&!data.value.continue.length){if(window.OrbitalPageReady?.managed())void window.OrbitalPageReady.fail('Your library could not finish loading. Retry to load this page.',pageTicket);else finishBrowseTransition(true);return;}
       if(mount(data.value,'complete')){S.key=key;if(mode==='home')homeRefreshAt=Date.now();restoreBrowsePosition(host.querySelector(':scope > .ob5-browse'));}
     }catch(e){if(window.OrbitalPageReady?.managed()){void window.OrbitalPageReady.fail('Your library could not finish loading. Please retry.',pageTicket);}else{document.documentElement.classList.remove('ob5-landing');finishBrowseTransition(true);console.warn('[Orbital browse] Native content retained:',e?.message||'unavailable');}}
     finally{release();}
   }
   function schedule(){if(!S.timer)S.timer=setTimeout(enhance,180);}
+  window.addEventListener('orbital:features-changed',schedule);
   window.addEventListener('orbital:page-retry',event=>{if(event.detail?.route!==location.hash||!window.OrbitalPageReady?.managed()||route().path==='/livetv')return;S.serial++;S.key=null;S.pending=null;S.pendingOwner=null;for(const key of [...S.cache.keys()])if(key.startsWith(S.user+'|'))S.cache.delete(key);const host=document.querySelector(route().path==='/home'?'#homeTab.is-active':route().path==='/movies'?'#moviesPage':'#tvshowsPage, #tvPage');host?.querySelector(':scope > .ob5-browse')?.remove();host?.classList.remove('ob5-content-ready');schedule();});
   // Observe only for route hosts that Jellyfin creates after hash navigation. Orbital-owned
   // mutations and unrelated React updates are not lifecycle signals.
@@ -7203,7 +7223,7 @@ window.OrbitalSystemBack=back;})();
    try{
     const params={SearchTerm:query,Recursive:true,IncludeItemTypes:type.value,StartIndex:start,Limit:60,EnableTotalRecordCount:true,Fields:'ProductionYear,PrimaryImageAspectRatio',SortBy:'SortName',SortOrder:'Ascending'};if(year.value)params.Years=year.value;
     const ctl=new AbortController();inflight=ctl;
-    const get=async p=>{const r=await fetch(api.getUrl('Users/'+user+'/Items',p),{headers:{'X-Emby-Token':api.accessToken(),Accept:'application/json'},signal:ctl.signal});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();};
+    const get=async p=>{const r=await fetch(api.getUrl('Users/'+user+'/Items',p),{headers:{'Authorization':'MediaBrowser Token='+JSON.stringify(api.accessToken()),Accept:'application/json'},signal:ctl.signal});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();};
     let data=await get(params);if(!valid(run))return;
     if(start===0&&!(data.Items||[]).length&&!year.value){const close=await closeMatches(get,query,type.value);if(!valid(run))return;if(close.length){data={Items:close,TotalRecordCount:close.length};fuzzy=true;}}
     const rows=data.Items||[];start+=rows.length;
@@ -8482,7 +8502,7 @@ html.orbital-live-single .headerTabs .emby-tab-button[data-index="0"],html.orbit
 
  // ---- Requests ------------------------------------------------------------------------------
  async function experience(api,route,body){
-  const r=await win.fetch(win.location.origin+PREFIX+route,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Emby-Token':api.accessToken()},body:JSON.stringify(body||{})});
+  const r=await win.fetch(api.getUrl(PREFIX.slice(1)+route),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Authorization':'MediaBrowser Token='+JSON.stringify(api.accessToken())},body:JSON.stringify(body||{})});
   if(!r.ok){const e=new Error('experience '+r.status);e.status=r.status;throw e;}return r.json();
  }
  function stateLabel(c){const req=c.request?.status;switch(c.state){case 'available':return 'Available';case 'in_library':return 'In your library';case 'partial':return 'Partly available';
@@ -8765,4 +8785,97 @@ html.orbital-live-single .headerTabs .emby-tab-button[data-index="0"],html.orbit
  }
  window.OrbitalFreeExperience={episodes,discovery,close,binding,seekBy,startOver};
  setInterval(()=>{if(!document.hidden)update();},750);update();
+})();
+
+/* Ordinary Jellyfin Live TV routes get channel browsing without a managed Sports plan. */
+(()=>{'use strict';
+let active=null,previous=null,last=null,dialog=null,retirement=null;
+const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;return e;};
+function read(){
+ const api=window.ApiClient,pm=window.TelevisionPlayerBridge?.manager,p=pm?.getCurrentPlayer?.(),item=p&&pm.currentItem(p);
+ if(!api||!p||!item||!['TvChannel','LiveTvChannel'].includes(item.Type)||window.TelevisionPlayback?.snapshot?.()?.attempt)return null;
+ const video=document.querySelector('#videoOsdPage video')||[...document.querySelectorAll('video')].find(v=>v.videoWidth>0&&!v.hidden);
+ if(!video||!document.querySelector('.videoOsdBottom'))return null;
+ return {api,pm,p,item,video,user:api.getCurrentUserId(),server:api.serverId(),token:api.accessToken(),session:pm.playSessionId(p)};
+}
+const same=(a,b)=>!!a&&!!b&&a.api===b.api&&a.p===b.p&&a.user===b.user&&a.server===b.server&&a.token===b.token&&a.item.Id===b.item.Id&&a.session===b.session;
+function close(){dialog?.close();dialog?.remove();dialog=null;}
+function owned(a){return same(a,read());}
+function retire(a){
+ const original=a.api.reportPlaybackStopped;
+ if(typeof original!=='function'||!a.session)return Promise.reject(Error('stop acknowledgement unavailable'));
+ return new Promise((resolve,reject)=>{
+  let timer,matched=false;
+  const restore=()=>{clearTimeout(timer);if(a.api.reportPlaybackStopped===wrapped)a.api.reportPlaybackStopped=original;};
+  function wrapped(info){
+   const exact=info?.PlaySessionId===a.session&&info?.ItemId===a.item.Id;
+   let request;try{request=original.apply(this,arguments);}catch(error){if(exact){restore();reject(error);}throw error;}
+   if(exact&&!matched){matched=true;Promise.resolve(request).then(()=>{restore();resolve();},error=>{restore();reject(error);});}
+   return request;
+  }
+  a.api.reportPlaybackStopped=wrapped;
+  timer=setTimeout(()=>{restore();reject(Error('stop acknowledgement timed out'));},15000);
+  Promise.resolve().then(()=>a.pm.stop(a.p)).catch(error=>{restore();reject(error);});
+ });
+}
+async function switchTo(a,item,status){
+ if(!owned(a))return;
+ if(item.Id===a.item.Id){close();return;}
+ status.textContent='Closing the current channel…';
+ try{
+  // Keep a single stop promise for this exact playback. An uncertain close is not retried automatically.
+  if(!retirement)retirement=retire(a);
+  await retirement;
+  if(window.ApiClient!==a.api||a.api.getCurrentUserId()!==a.user||a.api.serverId()!==a.server||a.api.accessToken()!==a.token)return;
+  if(a.pm.getCurrentPlayer?.()===a.p && a.pm.currentItem(a.p))throw Error('close not confirmed');
+  if(a.pm.getCurrentPlayer?.() && a.pm.currentItem(a.pm.getCurrentPlayer()))return; // Another playback already owns the screen.
+  close();await a.pm.play({ids:[item.Id],serverId:a.server,fullscreen:true});
+ }catch{status.textContent='The current channel has not confirmed it stopped. Use the player’s Stop or Back control before trying another channel.';}
+}
+async function browse(guide){
+ const a=active;if(!owned(a))return;close();
+ const d=el('dialog',null,'orbital-player-settings orbital-basic-channel-dialog');dialog=d;
+ const heading=el('header',null,'orbital-settings-heading'),done=el('button','Close','otv-category');done.onclick=close;heading.append(el('h2',guide?'TV guide':'Channels'),done);
+ const search=el('input'),status=el('p','Loading channels…'),list=el('div'),more=el('button','Load more','otv-category');
+ search.type='search';search.placeholder='Search channels';search.setAttribute('aria-label','Search channels');d.append(heading,search,status,list,more);
+ (document.fullscreenElement||document.body).append(d);d.showModal();search.focus();
+ let offset=0,generation=0,timer=null,busy=false;
+ const current=()=>dialog===d&&d.open&&owned(a);
+ async function load(reset){
+  const run=++generation;if(reset){offset=0;list.replaceChildren();}more.disabled=true;
+  try{
+   const data=await a.api.getLiveTvChannels({UserId:a.user,EnableCurrentProgram:true,Limit:60,StartIndex:offset,SearchTerm:search.value.trim()});
+   if(!current()||run!==generation)return;
+   for(const item of data.Items||[]){
+    const row=el('button',String(item.Number||'')+' '+item.Name,'otv-player-feed');row.type='button';
+    if(item.Id===a.item.Id)row.append(el('small','Watching'));
+    if(guide)row.append(el('small',item.CurrentProgram?.Name||'Schedule unavailable'));
+    row.onclick=async()=>{if(!current()||busy)return;busy=true;row.disabled=true;await switchTo(a,item,status);busy=false;};list.append(row);
+   }
+   offset+=(data.Items||[]).length;more.hidden=!data.Items?.length||offset>=Number(data.TotalRecordCount||offset);status.textContent=offset?offset+' channels shown':'No matching channels.';
+  }catch{if(current())status.textContent='Channels could not load. Try again.';}finally{if(current()&&run===generation)more.disabled=false;}
+ }
+ search.oninput=()=>{generation++;clearTimeout(timer);timer=setTimeout(()=>load(true),250);};more.onclick=()=>load(false);
+ d.addEventListener('close',()=>{generation++;clearTimeout(timer);d.remove();if(dialog===d)dialog=null;},{once:true});
+ for(const type of ['keydown','keyup'])d.addEventListener(type,e=>{e.stopPropagation();if(type==='keydown'&&['Escape','BrowserBack'].includes(e.key)){e.preventDefault();close();}},true);
+ await load(true);
+}
+function refresh(){
+ const next=read();
+ if(!same(active,next)){
+  close();document.getElementById('orbital-basic-channel-actions')?.remove();retirement=null;active=next;
+  if(next){
+   const key=next.server+'|'+next.user;
+   if(last?.key!==key){last=null;previous=null;}
+   if(last?.item.Id!==next.item.Id){previous=last;last={key,item:next.item};}
+  }
+ }
+ if(!active||document.getElementById('orbital-basic-channel-actions'))return;
+ const a=active,bar=el('div',null,'orbital-player-actions');bar.id='orbital-basic-channel-actions';
+ for(const [label,fn] of [['Channels',()=>browse(false)],['Guide',()=>browse(true)],['Last channel',()=>{if(previous){browse(false).then(()=>{if(dialog&&owned(a))switchTo(a,previous.item,dialog.querySelector('p'));});}}]]){
+  const b=el('button',label,'otv-category');b.type='button';if(label==='Last channel')b.disabled=!previous;b.onclick=e=>{e.preventDefault();e.stopPropagation();fn();};bar.append(b);
+ }
+ document.querySelector('.videoOsdBottom')?.append(bar);
+}
+setInterval(refresh,500);
 })();

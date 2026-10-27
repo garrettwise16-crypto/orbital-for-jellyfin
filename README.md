@@ -8,7 +8,7 @@ It's built as separate pieces. Use one, some or all of them; each works without 
 |---|---|---|---|
 | **Web interface** | A new look for Jellyfin in the browser: artwork-led Home, library rows, search, Live TV and guide, Sports and game centers. Stock Jellyfin is one click away. | [`web/`](web/) | [5 min](docs/INSTALL.md#web-interface) |
 | **sports-hub** | A small service: today's games for the NFL, college football, MLB, NBA, WNBA, NHL, MLS and UFC; live scores, trackers and previews; and which of your channels carries each game. | [`sports-hub/`](sports-hub/) | [10 min](docs/INSTALL.md#sports-hub) |
-| **Team logos** | Real team logos and colors in the sports screens, instead of initials. | [`tools/make_team_art.py`](tools/make_team_art.py) | [2 min](docs/LOGOS.md) |
+| **Team artwork** | Logos supplied by your connected sports source appear automatically, with initials when none are supplied. | [Artwork options](docs/LOGOS.md) | Included with connected sources |
 | **Orbital Phone and TV** | Native playback, episode selection, channels and sports trackers on Android, Android TV and Google TV. | [`native/`](native/) | [Preview downloads and source](native/README.md) |
 
 Common combinations:
@@ -19,7 +19,7 @@ Common combinations:
 
 ## Guided setup
 
-[Download Orbital Setup for Windows](https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/tag/setup-v0.2.0-preview.3). Open `OrbitalSetup.exe` to start the workflow. It is an unsigned preview; release notes include its checksum and current validation limits.
+[Download Orbital Setup for Windows](https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/tag/setup-v0.2.0-preview.4). Open `OrbitalSetup.exe` to start the workflow. It is an unsigned preview; release notes include its checksum and current validation limits.
 
 **Orbital Setup is an interactive workflow**, for a new Jellyfin server or an existing one. It explains each action, runs selected installation steps, checks the result, and lets you retry a failed feature without starting over. Choose the web interface, Sports, or both; library setup and Plex migration are optional.
 
@@ -28,6 +28,10 @@ The Windows preview can install Jellyfin through Windows Package Manager, then w
 On the final screen, choose **Save and check sources** before **Open Jellyfin**. Unsaved changes block opening Jellyfin and tell you what to save. A source that cannot answer is shown as a problem, not marked ready.
 
 You can also connect Seerr for requests and service catalogues. Save and check its connection, select one catalogue or all supported services, then watch setup download, validate and save the listings. No JSON export is required. Listings currently cover the US. Daily updates are enabled by default while Jellyfin runs; choose manual updates in setup if preferred. Failed or interrupted updates keep your saved listings. They add discovery metadata, not subscriptions or video.
+
+**Watch away from home** is optional. One workflow installs the private connection app, asks you to approve your own account, configures private HTTPS, and gives you a QR code and a guided phone check. It keeps existing proxy routes and does not open a public router port. The connection provider's approvals and the final phone test require you; local verification is never reported as outside-home proof.
+
+Use **stock Jellyfin or Orbital** on Android. Both connect to the same server and library; the optional Orbital app adds its native episode drawer, channel browser and tracker controls. The server web interface is optional too.
 
 Source and reproducible build instructions: [`setup/`](setup/). This preview has automated workflow and packaged-app checks; a clean Windows installation and administrator-prompt journey still need real-machine acceptance. Native preview APKs and their corresponding source are linked in [`native/`](native/). Full physical acceptance and switching-speed validation remain open.
 
@@ -58,9 +62,9 @@ Some things can't be included in this repository, because they belong to someone
 
 | Thing | Why it isn't included | What to do |
 |---|---|---|
-| Team logos | Trademarks of the leagues and teams | [Two commands](docs/LOGOS.md) link ESPN's logos from each viewer's browser |
-| Sports data | Belongs to the data provider | In guided setup, connect your chosen provider, feed, or opt-in source. The legacy Docker sports-hub reads ESPN public data; review its [details and caveats](docs/DATA-SOURCES.md#espns-public-data) before choosing that deployment. |
-| TV channels and guide | Need your own tuner or subscriptions | Set up Live TV in Jellyfin; a guide service such as Schedules Direct is optional ([how](docs/DATA-SOURCES.md#tv-channels-and-guide)) |
+| Team artwork | Each provider and image has its own permissions | Connected sources supply artwork automatically. [Artwork options and credits](docs/LOGOS.md) explain optional alternatives. |
+| Sports data | Belongs to the data provider | In guided setup, connect your chosen provider, feed, or opt-in source. The Docker service uses the same backend and explicit source choices as guided setup; review the [details and caveats](docs/DATA-SOURCES.md#espns-public-data) before choosing that deployment. |
+| TV channels and guide | Need your own tuner or subscriptions | Guided setup accepts a playlist, provider login, or HDHomeRun and an optional XMLTV guide. Test the connection, then save it to Jellyfin. [Other source types](docs/DATA-SOURCES.md#tv-channels-and-guide) remain available. |
 | Antenna channels named by call sign | Only you know your local stations | One line in `sports-hub/.env` ([how](docs/DATA-SOURCES.md#matching-games-to-your-channels)) |
 
 ## Free and Orbital Plus

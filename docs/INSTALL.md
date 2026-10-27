@@ -9,7 +9,7 @@ Orbital is made of separate pieces. Install one, some, or all of them; each work
 | Only the sports data, for your own client or dashboard | [sports-hub](#sports-hub) by itself | ~10 min |
 | Team logos in the sports screens | [Team logos](LOGOS.md), after the web interface | ~2 min |
 
-You need Python 3.9+ on the machine you install from, and Docker for sports-hub. The web interface is tested on Jellyfin 12.0; other versions are untested.
+You need Python 3.9+ on the machine you install from, and Docker for sports-hub. The web interface is tested on Jellyfin 12.0, 12.2 and 12.4; other versions are untested.
 
 **Try it on a test server first.** Everything here can be removed, but playback compatibility depends on your Jellyfin version.
 
@@ -91,9 +91,7 @@ Edit `.env`:
 | Setting | Meaning |
 |---|---|
 | `JELLYFIN_URL` | How sports-hub reaches Jellyfin, for example `http://jellyfin:8096` on the same Docker network or `http://host.docker.internal:8096`. |
-| `SPORTS_TIMEZONE` | The time zone that decides which games count as "today", for example `America/Chicago`. |
 | `CHANNEL_ALIASES` | Only if your channels are named by call sign: `WFLD=FOX;WBBM=CBS`. See [Data sources](DATA-SOURCES.md#matching-games-to-your-channels). |
-| `SPORTS_USER_AGENT` | How sports-hub identifies itself to ESPN. Put a contact address in it if you like. |
 
 If Jellyfin runs in Docker, put sports-hub on the same network: add `networks: [default, jellyfin_default]` to the service and declare that network as `external: true` (use your Jellyfin project's network name).
 
@@ -142,7 +140,7 @@ Open `https://<your Jellyfin address>/sports/api/status` in a browser tab.
 - A Jellyfin page or a `404` means the proxy route is missing. A `502` means the proxy can't reach sports-hub.
 - If Sports later says it is unavailable for signed-in viewers, sports-hub can't reach Jellyfin: check `JELLYFIN_URL` and `docker compose logs sports-hub`.
 
-With the web interface installed, reload Jellyfin: a **Sports** entry appears in the menu next to Live TV. If your server has no Live TV channels yet, the menu entry stays hidden; open Sports directly at `https://<your Jellyfin address>/web/#/livetv?tab=0&sports=1`.
+With the web interface installed and the Sports service reachable, reload Jellyfin: **Sports** appears in the menu even without Live TV channels. Connect sports data through Setup; external sources are off until you select them. To add channels, use **Connect live TV** on Setup's results page: test your playlist, IPTV login or HDHomeRun, then save and import. See [supported connections](DATA-SOURCES.md#tv-channels-and-guide).
 
 ### Using sports-hub without the web interface
 

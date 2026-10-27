@@ -158,7 +158,8 @@
     <div id="accounts" class="card soft" hidden></div>
     <div class="card soft">
       <h2>Watch on your TV and phone</h2>
-      <p>Install the free <strong>Jellyfin</strong> app from your TV's or phone's app store, then sign in with the same name and password. On the same Wi-Fi it finds this server automatically.</p>
+      <p>For the Orbital experience, install <a href="https://github.com/garrettwise16-crypto/orbital-for-jellyfin/tree/main/native" target="_blank" rel="noopener noreferrer">Orbital Phone or Orbital TV</a>, then sign in to this server with the same name and password. The download page explains Android installation.</p>
+      <p class="sub">You can also use a standard Jellyfin app; its interface and available controls will differ from Orbital.</p>
       <p class="sub">Use the server address from Open Jellyfin if your device does not find it automatically.</p>
     </div>
     <div class="card soft" id="keep-card" hidden>
@@ -166,6 +167,61 @@
       <p>Add <strong>Orbital for Jellyfin</strong> to your Start menu to switch the look, manage sports, or undo later. No administrator prompt; remove it any time from Settings &gt; Apps.</p>
       <div class="row"><button id="btn-keep">Keep it on this PC</button></div>
       <p id="keep-out" role="status" class="sub"></p>
+    </div>
+    <div class="card soft" id="live-tv-card">
+      <h2>Connect live TV</h2>
+      <p>Optional. Connect your own IPTV subscription, playlist, or antenna tuner. This adds channels to web, Orbital Phone and Orbital TV through the same Jellyfin server.</p>
+      <details id="live-tv-form">
+        <summary>Add a live TV source</summary>
+        <h3>1. Choose what your provider gave you</h3>
+        <label>Connection type<select id="live-tv-kind">
+          <option value="m3u">A playlist link (M3U)</option>
+          <option value="xtream">A server address, username and password (Xtream-compatible)</option>
+          <option value="hdhomerun">An HDHomeRun antenna tuner</option>
+        </select></label>
+        <h3>2. Enter the connection details</h3>
+        <label>A name you will recognise<input id="live-tv-name" value="My Live TV" maxlength="80" autocomplete="off"></label>
+        <label><span id="live-tv-url-label">Playlist address</span><input id="live-tv-url" type="url" autocomplete="off" spellcheck="false" placeholder="https://provider.example/playlist.m3u"></label>
+        <div id="live-tv-login" hidden>
+          <label>Provider username<input id="live-tv-user" autocomplete="off" spellcheck="false"></label>
+          <label>Provider password<input id="live-tv-password" type="password" autocomplete="new-password"></label>
+        </div>
+        <label>Guide address (XMLTV, optional)<input id="live-tv-guide" type="url" autocomplete="off" spellcheck="false" placeholder="https://provider.example/guide.xml"></label>
+        <p class="sub" id="live-tv-guide-hint">A guide adds programme names and schedules. Your provider can supply this link.</p>
+        <label>Simultaneous streams allowed<input id="live-tv-connections" type="number" min="1" max="20" value="1"></label>
+        <p class="sub">Use the limit in your subscription or tuner. Watching the same channel can share a connection. Your login is saved on your Jellyfin server, never in this project's GitHub repository.</p>
+        <h3>3. Test, then save</h3>
+        <div class="row"><button id="btn-live-tv-check">Test connection</button><button id="btn-live-tv-save" class="primary" disabled>Save and import channels</button></div>
+        <button class="ghost" id="btn-live-tv-clear">Clear form</button>
+        <p id="live-tv-out" role="status" aria-live="polite">Testing reads channel and guide information; it does not start a video.</p>
+      </details>
+      <h3>Connected sources</h3>
+      <ul id="live-tv-sources"></ul>
+      <button class="ghost" id="btn-live-tv-refresh">Refresh connected sources</button>
+      <p class="sub">Streaming-app subscriptions connect here only if the service supplies a compatible playlist or tuner integration. Adding a title catalogue does not grant live channel access.</p>
+    </div>
+    <div class="card soft" id="remote-access-card">
+      <h3>Watch away from home <span class="sub">Optional</span></h3>
+      <p>Watch your library when you travel. We'll set up a private connection and help you add your phone. Your computer needs to stay on while you watch.</p>
+      <p class="sub">This uses Tailscale, a separate connection app with its own account and plan limits. Only devices you approve can connect. Your Jellyfin password is still required.</p>
+      <button class="primary" data-remote="advance" id="remote-start">Set up watching away from home</button>
+      <p id="remote-out" role="status" aria-live="polite">You can skip this and set it up later.</p>
+      <a id="remote-approve" class="button" hidden target="_blank" rel="noopener noreferrer">Approve your connection</a>
+      <div id="remote-phone" hidden>
+        <h4>Let's connect your phone</h4>
+        <p>1. <a href="https://tailscale.com/download" target="_blank" rel="noopener noreferrer">Install Tailscale on your phone</a> and sign in with the same account you just approved. Allow its connection request.</p>
+        <p>2. Turn your phone's Wi-Fi off, keeping mobile data and Tailscale on. Scan this code with your camera, then sign into Jellyfin.</p>
+        <img id="remote-qr" alt="Scan to open your Jellyfin server" width="220" height="220">
+        <label>Your server address<input id="remote-result" readonly aria-label="Remote server address"></label>
+        <button id="remote-copy">Copy address for Jellyfin or Orbital</button>
+        <p>3. Open a title and try playing it. Did it work with Wi-Fi off?</p>
+        <div class="row"><button id="remote-confirm">Yes, I can watch away from home</button><button id="remote-help">Not yet — help me</button></div>
+      </div>
+      <details><summary>Advanced: I already have an HTTPS address</summary>
+        <p>Check an existing HTTPS address. This does not configure a domain, router or proxy.</p>
+        <label>Server address<input id="remote-url" type="url" placeholder="https://media.example.com" autocomplete="off"></label>
+        <button data-remote="verify">Check this server address</button>
+      </details>
     </div>
     <div class="card soft" id="integrations-card" hidden>
       <h3>Your library and requests</h3>
@@ -243,7 +299,7 @@
     </details>
     <div class="card" id="open-ready">
       <h2>Ready to open Jellyfin?</h2>
-      <p id="save-before-open">Save any changes above first. Use <strong>Save and check sources</strong> after entering a key or feed address. Open Jellyfin opens your server; it does not save this form.</p>
+      <p id="save-before-open">Save any changes above first. For Live TV, choose <strong>Test connection</strong>, then <strong>Save and import channels</strong>. For sports data, use <strong>Save and check sources</strong>. Open Jellyfin opens your server; it does not save this form.</p>
       <p id="unsaved-notice" role="status" hidden>You have unsaved source settings. Save and check them before opening Jellyfin.</p>
       <div class="actions"><a class="button primary big" id="open-jf" target="_blank" rel="noopener" aria-describedby="save-before-open unsaved-notice">Open Jellyfin</a></div>
     </div>

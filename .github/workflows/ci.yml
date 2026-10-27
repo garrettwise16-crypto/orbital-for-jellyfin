@@ -16,11 +16,11 @@ jobs:
       - name: Scanner boundary tests
         run: python -m unittest discover -s tools -p "test_*.py"
       - name: Guided setup workflow
-        run: python tools/run_setup_tests.py
-      - name: Public tracker clock
-        run: node web/tests/public-clock.test.js
-      - name: Reported-game polling policy
-        run: node web/tests/reported-polling.test.js
+        run: |
+          pip install segno==1.6.6
+          python tools/run_setup_tests.py
+      - name: Web playback, artwork, discovery and tracker policies
+        run: node --test web/tests/*.test.js
       - name: Parse web scripts
         run: for file in web/dist/*.js; do node --check "$file"; done
       - name: sports-hub unit tests
@@ -28,4 +28,4 @@ jobs:
         run: PYTHONPATH=app python -m unittest discover -s tests -v
       - name: sports-hub image builds
         working-directory: sports-hub
-        run: docker build -t orbital-sports-hub .
+        run: docker build -f Dockerfile -t orbital-sports-hub ..

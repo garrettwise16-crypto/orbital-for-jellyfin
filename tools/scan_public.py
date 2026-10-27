@@ -48,6 +48,11 @@ ALLOW = [
 
 
 def allowed(rule, path, text):
+    # User-requested generic Live TV connectors: protocol names, never household providers.
+    # Keep the exception scoped to these reviewed implementation/UI/test/docs files.
+    live_tv_files = {'setup/fpmigrate/live_tv.py', 'setup/fpmigrate/ui/app.js',
+                     'setup/fpmigrate/ui/index.html', 'setup/tests/test_live_tv.py', 'docs/DATA-SOURCES.md'}
+    if rule == 'private media source' and path.as_posix() in live_tv_files and text.lower() in {'m3u', 'xtream'}: return True
     # Existing request API names a link to a separately authenticated request site.
     # This is a product navigation contract, not an agent instruction/document.
     if rule == 'agent handoff' and path.as_posix() == 'setup/sports_service/app/experience_connected.py' and text == 'handoff': return True

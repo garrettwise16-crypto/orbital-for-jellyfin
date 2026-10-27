@@ -36,7 +36,7 @@ import catalogue_discovery
 import catalogue_refresh
 import provider_catalogue
 
-VERSION = 'sports-ce-20261027-public.3'
+VERSION = 'sports-ce-20261027-public.4'
 SECRET = os.environ.get('ORBITAL_BRIDGE_SECRET', '')
 JELLYFIN = os.environ.get('JELLYFIN_URL', 'http://127.0.0.1:8096').rstrip('/')
 core.JELLYFIN = JELLYFIN
@@ -594,8 +594,8 @@ def main():
     if data:
         os.makedirs(data, exist_ok=True)
     bind = os.environ.get('SPORTS_BIND', '127.0.0.1')
-    if bind != '127.0.0.1' and not SECRET:
-        raise SystemExit('Refusing to listen beyond 127.0.0.1 without a bridge secret')
+    if bind != '127.0.0.1' and not SECRET and os.environ.get('SPORTS_STANDALONE') != '1':
+        raise SystemExit('Refusing to listen beyond loopback without a bridge secret or explicit standalone deployment')
     parent = int(os.environ.get('ORBITAL_PARENT_PID') or 0)
     if parent:
         threading.Thread(target=watch_parent, args=(parent,), daemon=True, name='parent-watch').start()

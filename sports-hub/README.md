@@ -1,56 +1,40 @@
-# sports-hub
+# Current container deployment
 
-A small service that gives Jellyfin a sports layer: today's games across the major US leagues, live scores and game centers, play trackers, pregame previews and per-account favorite teams. It pairs each game with the Live TV channels the viewer can already watch in Jellyfin, such as an antenna tuner or any other lineup you legally have.
+The container now runs the same public service as guided setup: personal library, optional requests, service catalogues with daily refresh, administrator-selected sports sources, and estimated trackers. Existing team preferences keep their volume. New installations begin with your own TV guide; ESPN public data is opt-in.
 
-- **Leagues:** NFL, college football (FBS), MLB, NBA, WNBA, NHL, MLS and UFC.
-- **Standard library only:** one Python process, no dependencies, 256 MB.
-- **Signed-in viewers only:** every request must carry the viewer's Jellyfin token. Channel lists come from Jellyfin with that viewer's own permissions, so nobody sees channels they can't already watch.
-- **No video:** sports-hub never opens, proxies or re-streams video. "Watch" means "tune this Jellyfin channel".
-- **Spoiler-aware:** each game lists the channels carrying it (`carriers`). A client showing that channel can keep the live tracker hidden, so the tracker never reveals a score before the picture does.
+Run `docker compose up -d --build` from this folder. The build context is the repository root. Keep the published port bound to loopback and route `/sports/api/*` through the same origin as Jellyfin. Every data request still requires a valid Jellyfin user; configuration requires an administrator. There is no shared administrator API key in the container.
 
-> Schedules, scores and play-by-play come from ESPN's public site API. It is **unofficial and undocumented** and can change or disappear without notice. This project is not affiliated with ESPN. Team logos are linked from ESPN's CDN, not redistributed.
+After starting, connect the Windows guided setup to that Jellyfin address. It detects the existing standalone backend and lets you configure sources, Seerr and catalogues without installing another service or restarting Jellyfin.
 
-## Run it
+The older `app/` implementation is retained as reference for existing integrations; the Dockerfile deliberately builds `setup/sports_service/app/` so the two supported deployments cannot silently diverge.
 
-```bash
-cp .env.example .env        # set JELLYFIN_URL
-docker compose up -d --build
-```
+## Connect it
 
-Put it behind the reverse proxy that serves Jellyfin, so clients call `/sports/api/...` on the same origin. Caddy example:
+Copy `.env.example` to `.env` and set `JELLYFIN_URL` to the address reachable from the container. Start with `docker compose up -d --build`. Your reverse proxy must forward `/sports/api/*` to this service on the same origin as Jellyfin. For example, on a shared Docker network:
 
-```
+```caddy
 handle /sports/api/* {
     reverse_proxy sports-hub:8080
 }
 ```
 
-## API
+The supplied Compose file publishes only on the host loopback address. A proxy running in another container needs a shared network; a host proxy uses `127.0.0.1:8080`.
 
-All endpoints require the viewer's Jellyfin token, sent as `Authorization: MediaBrowser Token="<token>"` (what Jellyfin's own web client sends) or as `X-Emby-Token: <token>`. sports-hub forwards it to Jellyfin in the `Authorization` form, which Jellyfin 12 requires.
+## Data and optional features
 
-| Endpoint | What it returns |
-|---|---|
-| `GET /sports/api/events?date=YYYY-MM-DD` | Games for that day (yesterday through six days ahead). Each game has teams, scores, status, AP rank, broadcast networks, `sources` (the viewer's matching channels), `carriers` and `feed_status` (`available` / `none` / `ended`). |
-| `GET /sports/api/game/{id}/state?league=NFL` | Game center: clock, period, line score, team stats and situation graphics (bases/count/outs, down & distance, possession). For finished games, a scoring summary and decisions. |
-| `GET /sports/api/tracker?league=MLB&event={id}` | Play tracker: pitch locations and at-bat history, football drive chart, basketball shot chart, hockey shots. |
-| `GET /sports/api/preview?league=NFL&event={id}` | Pregame: recent form, leaders and team news. |
-| `GET /sports/api/rankings` | College football AP / Coaches (and CFP) polls. |
-| `GET /sports/api/team-directory?league=NFL`, `GET /sports/api/team?key=NFL~3` | Team pickers and a team's schedule and results. |
-| `GET` / `POST /sports/api/team-preferences` | The signed-in account's followed teams (stored in SQLite). |
+Use guided setup to select your sports data source, connect your own Seerr server, and import service catalogues. Sources and credentials are not bundled. ESPN public data is an explicit opt-in and is unofficial; availability and fields depend on the source you choose. Your own TV guide works without that opt-in. Logos come from your selected source, not a redistributed logo pack.
 
-Every upstream response is cached and bounded. If ESPN fails, the last good copy is served, flagged `stale`.
+Trackers use estimated timing and manual Sync for watched games. Private paid picture synchronization is not included. No video is opened or relayed by this service; Watch opens an authorized channel in Jellyfin.
 
-## Matching games to channels
+The `/preferences` volume preserves settings and per-account team preferences across rebuilds. Do not remove it during upgrades. Configuration endpoints require a Jellyfin administrator; normal data endpoints use the signed-in viewer's library and channel permissions.
 
-ESPN's broadcast networks (for example "ESPN" or "FOX") are compared with your Jellyfin channel names after normalization. Channel numbers, "HD", "East/West" and similar suffixes are ignored. The match is exact, so "ESPN" never matches "ESPNU". Antenna channels named by call sign need an alias:
+## Verification
 
-```
-CHANNEL_ALIASES=WFLD=FOX;WBBM=CBS;WMAQ=NBC;WLS=ABC
+From the repository root:
+
+```sh
+python tools/run_setup_tests.py
+python tools/scan_public.py
 ```
 
-## Tests
-
-```bash
-PYTHONPATH=app python -m unittest discover -s tests -v
-```
+These test the shared service used by both the container and the Windows package. The legacy `sports-hub/tests` suite covers the retained old implementation only.
