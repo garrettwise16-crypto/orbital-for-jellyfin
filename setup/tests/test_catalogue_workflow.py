@@ -26,6 +26,15 @@ class CatalogueWorkflowTests(unittest.TestCase):
   self.assertEqual([x[0] for x in jf.calls],['GET']*4+['POST'])
   self.assertTrue(any('page 2 of 2' in p for p in progress))
   self.assertEqual(jf.calls[-1][2]['body']['region'],'US')
+ def test_manual_refresh_choice_is_saved(self):
+  jf=Fixture()
+  with patch.object(catalogues.time,'sleep'):
+   catalogues.connect(jf,'netflix',lambda p:None,lambda:None,False)
+  self.assertIs(jf.calls[-1][2]['body']['automatic_refresh'],False)
+ def test_invalid_refresh_choice_does_not_fetch(self):
+  jf=Fixture()
+  with self.assertRaises(ValueError):catalogues.connect(jf,'netflix',lambda p:None,lambda:None,'yes')
+  self.assertFalse(jf.calls)
  def test_failure_never_replaces_partial_catalogue(self):
   jf=Fixture(True)
   with patch.object(catalogues.time,'sleep'),self.assertRaises(ValueError):

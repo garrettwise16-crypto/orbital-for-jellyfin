@@ -1,5 +1,5 @@
 """Validate an administrator-supplied catalogue before replacing its saved snapshot."""
-import json, math, os, re, threading
+import hashlib, json, math, os, re, threading
 from datetime import datetime, timezone
 from pathlib import Path
 PROVIDERS=('apple-tv','netflix','disney-plus','hulu','max','prime-video','peacock','paramount-plus')
@@ -13,11 +13,12 @@ def status():
  for name in PROVIDERS:
   p=root()/(name+'.json')
   if p.is_file():
-   d=json.loads(p.read_text());rows.append({'provider':name,'entries':len(d['entries']),'updated_at':d['updated_at']})
+   d=json.loads(p.read_text());rows.append({'provider':name,'entries':len(d['entries']),'updated_at':d['updated_at'],'automatic_refresh':d.get('automatic_refresh',False)})
  return {'catalogues':rows}
-def save(data):
+def save(data, expected_sha256=None):
  if not isinstance(data,dict) or data.get('provider') not in PROVIDERS:raise ValueError('Choose a supported service catalogue')
  if data.get('region','US') != 'US':raise ValueError('This catalogue view currently supports US listings only')
+ if type(data.get('automatic_refresh',False)) is not bool:raise ValueError('Choose whether to refresh automatically')
  stamp=data.get('updated_at');when=datetime.fromisoformat(str(stamp).replace('Z','+00:00'))
  if when.tzinfo is None or when.timestamp()>datetime.now(timezone.utc).timestamp()+300:raise ValueError('Catalogue date must be a real past observation with a timezone')
  values=data.get('entries')
@@ -46,9 +47,10 @@ def save(data):
    if v is not None and (not isinstance(v,str) or not re.fullmatch(r'/[A-Za-z0-9_.-]{1,200}',v)):raise ValueError('Artwork must be a TMDB image path')
    row[key]=v
   clean.append(row)
- result={'provider':data['provider'],'updated_at':when.isoformat(),'region':'US','entries':clean}
+ result={'provider':data['provider'],'updated_at':when.isoformat(),'region':'US','entries':clean,'automatic_refresh':data.get('automatic_refresh',False)}
  with _lock:
   folder=root();folder.mkdir(parents=True,exist_ok=True);p=folder/(data['provider']+'.json');tmp=p.with_suffix('.new')
+  if expected_sha256 is not None and (not p.is_file() or hashlib.sha256(p.read_bytes()).hexdigest()!=expected_sha256):raise ValueError('Catalogue changed during refresh; newer settings were kept')
   with tmp.open('x',encoding='utf-8') as f:json.dump(result,f);f.flush();os.fsync(f.fileno())
   try:os.replace(tmp,p)
   finally:tmp.unlink(missing_ok=True)

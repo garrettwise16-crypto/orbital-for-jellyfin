@@ -683,9 +683,9 @@ $("btn-connect-catalogue").addEventListener("click", ev => busy(ev.target, async
   catalogueRunning = true;
   $("catalogue-connect-out").textContent = "Checking your saved Seerr connection…";
   try {
-    await api("POST", "/api/catalogues/connect", {provider:$("catalogue-provider").value});
+    await api("POST", "/api/catalogues/connect", {provider:$("catalogue-provider").value, automatic_refresh:$("catalogue-auto-refresh").checked});
     const result = await waitJob(p => { $("catalogue-connect-out").textContent = p.message || "Connecting catalogues…"; });
-    $("catalogue-connect-out").textContent = "Connected: " + result.catalogues.map(c => `${c.provider} (${c.entries.toLocaleString()} titles)`).join(", ") + ". Open Jellyfin below to use Services.";
+    $("catalogue-connect-out").textContent = "Connected: " + result.catalogues.map(c => `${c.provider} (${c.entries.toLocaleString()} titles)`).join(", ") + ($("catalogue-auto-refresh").checked ? ". Daily updates are on while Jellyfin is running." : ". Manual updates selected; connect again when you want fresh listings.") + " Open Jellyfin below to use Services.";
   } catch(e) { $("catalogue-connect-out").textContent = "Needs attention: " + e.message + ". Previously saved catalogues remain available; retry this service when ready."; }
   finally { catalogueRunning = false; }
 }));

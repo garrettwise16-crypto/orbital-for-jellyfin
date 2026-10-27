@@ -19,7 +19,7 @@ Common combinations:
 
 ## Guided setup
 
-[Download Orbital Setup for Windows](https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/tag/setup-v0.2.0-preview.2). Open `OrbitalSetup.exe` to start the workflow. It is an unsigned preview; release notes include its checksum and current validation limits.
+[Download Orbital Setup for Windows](https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/tag/setup-v0.2.0-preview.3). Open `OrbitalSetup.exe` to start the workflow. It is an unsigned preview; release notes include its checksum and current validation limits.
 
 **Orbital Setup is an interactive workflow**, for a new Jellyfin server or an existing one. It explains each action, runs selected installation steps, checks the result, and lets you retry a failed feature without starting over. Choose the web interface, Sports, or both; library setup and Plex migration are optional.
 
@@ -27,7 +27,7 @@ The Windows preview can install Jellyfin through Windows Package Manager, then w
 
 On the final screen, choose **Save and check sources** before **Open Jellyfin**. Unsaved changes block opening Jellyfin and tell you what to save. A source that cannot answer is shown as a problem, not marked ready.
 
-You can also connect Seerr for requests and service catalogues. Save and check its connection, select one catalogue or all supported services, then watch setup download, validate and save the listings. No JSON export is required. Listings currently cover the US; run the connection step again to refresh them. They add discovery metadata, not subscriptions or video.
+You can also connect Seerr for requests and service catalogues. Save and check its connection, select one catalogue or all supported services, then watch setup download, validate and save the listings. No JSON export is required. Listings currently cover the US. Daily updates are enabled by default while Jellyfin runs; choose manual updates in setup if preferred. Failed or interrupted updates keep your saved listings. They add discovery metadata, not subscriptions or video.
 
 Source and reproducible build instructions: [`setup/`](setup/). This preview has automated workflow and packaged-app checks; a clean Windows installation and administrator-prompt journey still need real-machine acceptance. Native preview APKs and their corresponding source are linked in [`native/`](native/). Full physical acceptance and switching-speed validation remain open.
 

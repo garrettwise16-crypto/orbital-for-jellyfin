@@ -5,9 +5,11 @@ from urllib.parse import urlencode
 
 PROVIDERS = ('apple-tv', 'netflix', 'disney-plus', 'hulu', 'max', 'prime-video', 'peacock', 'paramount-plus')
 
-def connect(jf, provider, progress, cancelled):
+def connect(jf, provider, progress, cancelled, automatic_refresh=True):
     if provider not in (*PROVIDERS, 'all'):
         raise ValueError('Choose a catalogue')
+    if type(automatic_refresh) is not bool:
+        raise ValueError('Choose whether to refresh daily')
     completed = []
     for name in PROVIDERS if provider == 'all' else (provider,):
         entries = {}
@@ -38,7 +40,7 @@ def connect(jf, provider, progress, cancelled):
         cancelled()
         progress(f'Checking and saving {name}: {len(entries):,} titles…')
         saved = jf.call('POST', '/sports/api/catalogues/import', body={
-            'provider': name, 'region': 'US', 'updated_at': datetime.now(timezone.utc).isoformat(),
+            'provider': name, 'region': 'US', 'automatic_refresh': automatic_refresh, 'updated_at': datetime.now(timezone.utc).isoformat(),
             'entries': list(entries.values())}, timeout=30, retries=0)
         completed.append(saved)
     return {'catalogues': completed}

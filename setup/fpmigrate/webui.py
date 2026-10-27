@@ -343,7 +343,8 @@ class App:
             if self.engine.cancel_event.is_set():
                 raise Cancelled()
         if not self.job.start('catalogues', lambda: catalogues.connect(jf, provider,
-                lambda message: self.engine._p('catalogues', message=message), check_cancel)):
+                lambda message: self.engine._p('catalogues', message=message), check_cancel,
+                (body or {}).get('automatic_refresh', True))):
             raise ValueError("Another setup step is running. Wait for it to finish.")
         return {'started': True}
 

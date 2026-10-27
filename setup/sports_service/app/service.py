@@ -33,9 +33,10 @@ import personal_library
 import integrations
 import catalogue_sources
 import catalogue_discovery
+import catalogue_refresh
 import provider_catalogue
 
-VERSION = 'sports-ce-20261027-public.2'
+VERSION = 'sports-ce-20261027-public.3'
 SECRET = os.environ.get('ORBITAL_BRIDGE_SECRET', '')
 JELLYFIN = os.environ.get('JELLYFIN_URL', 'http://127.0.0.1:8096').rstrip('/')
 core.JELLYFIN = JELLYFIN
@@ -294,7 +295,7 @@ class Handler(BaseHTTPRequestHandler):
         if p == '/sports/api/catalogues/import':
             if not user.get('Policy', {}).get('IsAdministrator'):
                 return self.respond(403, {'error':'Only an administrator can connect catalogues'})
-            return self.respond(200, catalogue_sources.save(self.body) if hasattr(self,'body') else catalogue_sources.status())
+            return self.respond(200, catalogue_sources.save(self.body) if hasattr(self,'body') else {**catalogue_sources.status(), 'refresh': catalogue_refresh.status()})
         if p == '/sports/api/catalogue':
             def fetch(url, credential):
                 if not url.startswith(JELLYFIN+'/'):raise ValueError('Unexpected library origin')
@@ -599,6 +600,7 @@ def main():
     if parent:
         threading.Thread(target=watch_parent, args=(parent,), daemon=True, name='parent-watch').start()
     threading.Thread(target=prewarm_trackers, daemon=True, name='tracker-prewarm').start()
+    threading.Thread(target=catalogue_refresh.run, daemon=True, name='catalogue-refresh').start()
     server = Server((bind, int(os.environ.get('PORT', '8765'))), Handler)
     print(json.dumps({'listening': server.server_address[1], 'version': VERSION}), flush=True)
     server.serve_forever()
