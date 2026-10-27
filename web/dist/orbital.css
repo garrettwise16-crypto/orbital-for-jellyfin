@@ -1950,3 +1950,38 @@ html body .otv-all-filters .otv-af-field input,html body .otv-all-filters .otv-a
  html.ob5-shell .otv-sports.otv-v2.otv-board3 .otv-sports-chips:not(:has(.otv-filter-scroll)) .otv-filter-label{display:none!important}
  html.ob5-shell .otv-sports.otv-v2.otv-board3 .otv-sports-chips:not(:has(.otv-filter-scroll)) button{flex:none;min-height:48px;width:auto!important;white-space:nowrap}
 }
+
+/* Narrow Game Center: team names and leader labels never overlap their data. */
+@media(max-width:600px){
+ .otv-sports-dialog .gc2-form{display:grid;grid-template-columns:minmax(0,1fr) repeat(5,26px);gap:5px}
+ .otv-sports-dialog .gc2-ab{width:auto;min-width:0;overflow-wrap:anywhere}
+ .otv-sports-dialog .gc2-lrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px 10px}
+ .otv-sports-dialog .gc2-lrow>small{grid-column:1/-1;grid-row:1}
+ .otv-sports-dialog .gc2-who{grid-row:2;gap:6px}
+ .otv-sports-dialog .gc2-who>div{min-width:0}
+ .otv-sports-dialog .gc2-who img{width:30px;height:30px}
+ .otv-sports-dialog .gc2-who strong{white-space:normal;overflow-wrap:anywhere;font-size:12px}
+}
+
+@media(max-width:600px){
+ .otv-sports-dialog .gc2-hero{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:6px;padding:14px 8px}
+ .otv-sports-dialog .gc2-mid{min-width:0;max-width:132px}
+ .otv-sports-dialog .gc2-score{font-size:28px;gap:4px}
+ .otv-sports-dialog .gc2-score i{font-size:18px}
+ .otv-sports-dialog .gc2-time{font-size:23px}
+ .otv-sports-dialog .gc2-plate{width:48px;height:48px;border-radius:12px}
+ .otv-sports-dialog .gc2-nick{font-size:13px;white-space:normal;overflow-wrap:normal;word-break:normal}
+ .otv-sports-dialog .gc2-card{padding:14px 12px}
+ .otv-sports-dialog .gc2-linescore td:first-child,.otv-sports-dialog .gc2-linescore th:first-child{white-space:normal;min-width:80px;max-width:100px;font-size:12px}
+ .otv-sports-dialog .gc2-linescore table{font-size:13px}
+}
+
+@media(max-width:420px){
+ .otv-sports-dialog .gc2-hero{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+ .otv-sports-dialog .gc2-team{grid-row:1}
+ .otv-sports-dialog .gc2-team.away{grid-column:1}
+ .otv-sports-dialog .gc2-team.home{grid-column:2}
+ .otv-sports-dialog .gc2-mid{grid-column:1/-1;grid-row:2;max-width:none}
+ .otv-sports-dialog .gc2-nick{font-size:15px}
+ .otv-sports-dialog .gc2-score{font-size:32px}
+}

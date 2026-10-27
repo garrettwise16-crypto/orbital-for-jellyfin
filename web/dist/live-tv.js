@@ -1989,9 +1989,9 @@ function pitchCameraCore(){
   const stats=(rc.team_stats||[]).slice(0,5);if(stats.length){const t=el('table','gc2-stats');const hr=el('tr','');hr.append(el('th',''));for(const x of stats)hr.append(el('th','',x.label));t.append(hr);
    for(const sd of ['away','home']){const r=el('tr','');r.append(el('td','gc2-sab',abbr(sd)));for(const x of stats)r.append(el('td','',String(x[sd]??'')));t.append(r);}k.append(t);}
   const wp=(rc.win_probability||[]).filter(Number.isFinite);if(wp.length>1){
-   const end=Math.round(wp[wp.length-1]*100),head=el('div','gc2-wph');head.append(el('small','gc2-wpl',abbr('home')+' win chance'),el('strong','gc2-wpv',end+'%'));
+   const end=Math.round(wp[wp.length-1]*100),head=el('div','gc2-wph');head.append(el('small','gc2-wpl',abbr('home')+' · last reported win chance'),el('strong','gc2-wpv',end+'%'));
    const box=el('div','gc2-wpbox');const axis=el('div','gc2-wpaxis');axis.append(el('span','','100'),el('span','','50'),el('span','','0'));box.append(axis,spark(wp));
-   const ends=el('div','gc2-wpends');ends.append(el('span','','Start'),el('span','','Final'));k.append(head,box,ends);}
+   const ends=el('div','gc2-wpends');ends.append(el('span','','First report'),el('span','','Last report'));k.append(head,box,ends);}
   cards.push(k);
   // The score by inning / period belongs at the top of a final, not under the plays.
   const lineScore=()=>{const t=dialog.querySelector('.otv-score-table-wrap:not(.gc2-linescore)');if(!t)return false;if(!k.querySelector('.gc2-linescore')){const c=t.cloneNode(true);c.classList.add('gc2-linescore');k.insertBefore(c,k.children[1]||null);}return true;};
