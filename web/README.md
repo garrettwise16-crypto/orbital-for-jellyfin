@@ -12,7 +12,9 @@ Game Center and other non-watched trackers request the latest reported state eve
 
 ## Try it on a test Jellyfin installation
 
-Back up the test server's `index.html`. Copy the contents of `dist/` into a new `orbital/` directory alongside it. Before Jellyfin's scripts in the HTML head, add the following in this order (prefix the paths with your Jellyfin base URL if configured):
+The easiest way is the installer, which does the steps below and can undo them: `python3 tools/install_web.py --web-dir <folder containing Jellyfin's index.html>`. See [docs/INSTALL.md](../docs/INSTALL.md). For team logos, see [docs/LOGOS.md](../docs/LOGOS.md).
+
+To do it by hand: back up the test server's `index.html`. Copy the contents of `dist/` into a new `orbital/` directory alongside it. Before Jellyfin's scripts in the HTML head, add the following in this order (prefix the paths with your Jellyfin base URL if configured):
 
 ```html
 <script src="/web/orbital/orbital-customer.js"></script>

@@ -27,7 +27,7 @@ handle /sports/api/* {
 
 ## API
 
-All endpoints require `X-Emby-Token: <Jellyfin token>` (or the standard `Authorization: MediaBrowser ... Token="..."` header).
+All endpoints require the viewer's Jellyfin token, sent as `Authorization: MediaBrowser Token="<token>"` (what Jellyfin's own web client sends) or as `X-Emby-Token: <token>`. sports-hub forwards it to Jellyfin in the `Authorization` form, which Jellyfin 12 requires.
 
 | Endpoint | What it returns |
 |---|---|

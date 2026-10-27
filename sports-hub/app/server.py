@@ -38,7 +38,8 @@ USER_AGENT = os.environ.get('SPORTS_USER_AGENT', 'orbital-sports-hub/1.0')
 def get_json(url, token=None):
     headers = {'Accept': 'application/json', 'User-Agent': USER_AGENT}
     if token:
-        headers['X-Emby-Token'] = token
+        # Jellyfin 12 rejects the legacy X-Emby-Token header by default; this form works on 10.x and 12.
+        headers['Authorization'] = 'MediaBrowser Token="%s"' % token
     with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=8) as response:
         body = response.read(8*1024*1024+1)
         if len(body) > 8*1024*1024:

@@ -3430,18 +3430,19 @@ if(typeof module!=='undefined')module.exports=global.OrbitalPersonal;
 'use strict';if(new URLSearchParams(location.search).get('orbital')==='off')return;
 let user=null,admin=false,busy=false,last=0;
 const make=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
+// Shown only when the server publishes a backfill snapshot; otherwise nothing appears and it rechecks every 5 minutes.
 async function refresh(force=false){
  const api=window.ApiClient,u=api?.getCurrentUserId?.();
  if(u!==user){user=u;admin=false;last=0;document.querySelectorAll('.orbital-backfill').forEach(n=>n.remove());if(u){try{admin=!!(await api.getCurrentUser()).Policy?.IsAdministrator;}catch{return;}}}
  if(!u||!admin||busy||document.hidden||!/^#\/(home|dashboard)(?:[?&]|$)/.test(location.hash)||(/^#\/home/.test(location.hash)&&new URLSearchParams(location.hash.split('?')[1]||'').get('tab')==='1'))return;
  const host=document.querySelector('.orbital-admin-tools');if(!host)return;
- let box=host.parentElement.querySelector('.orbital-backfill');if(box&&Date.now()-last<30000&&!force)return;
- if(!box){box=make('section','orbital-backfill orbital-personal');box.setAttribute('aria-label','Library backfill progress');host.after(box);box.append(make('p','','Loading library progress…'));}
+ let box=host.parentElement.querySelector('.orbital-backfill');if(Date.now()-last<(box?30000:300000)&&!force)return;
  busy=true;
  try{
   const prefs=await api.ajax({type:'GET',url:api.getUrl('DisplayPreferences/orbital-backfill-progress',{userId:u,client:'orbital'}),dataType:'json'});
-  if(api.getCurrentUserId()!==u||!box.isConnected)return;
+  if(api.getCurrentUserId()!==u||box&&!box.isConnected)return;
   const d=JSON.parse(prefs.CustomPrefs?.progress||'null');if(!d?.overall)throw Error('No snapshot');
+  if(!box){box=make('section','orbital-backfill orbital-personal');box.setAttribute('aria-label','Library backfill progress');host.after(box);}
   const o=d.overall,head=make('div','orbital-backfill-heading');head.append(make('h2','','Library backfill'),make('strong','orbital-backfill-percent',o.percent+'% available'));
   const progress=make('progress');progress.max=o.total||1;progress.value=o.available;progress.setAttribute('aria-label','Backfill titles available in Jellyfin');
   const stats=make('div','orbital-backfill-stats');for(const [label,value] of [['Available in Jellyfin',o.available],['Submitted',o.submitted],['Waiting to submit',o.waiting_to_submit],['Needs attention',o.needs_attention]]){const cell=make('div');cell.append(make('strong','',Number(value).toLocaleString()),make('span','',label));stats.append(cell);}
@@ -3454,7 +3455,7 @@ async function refresh(force=false){
   }
   if(d.attention?.length){const details=make('details');details.append(make('summary','',d.attention.length+' titles need attention'));for(const e of d.attention){details.append(make('p','',e.title+' — '+e.reason));}box.append(details);}
   const b=make('button','orbital-chip','Refresh progress');b.type='button';b.onclick=()=>{last=0;refresh(true);};box.append(b);last=Date.now();
- }catch{box.replaceChildren(make('h2','','Library backfill'),make('p','','Progress is temporarily unavailable. It will retry automatically.'));last=0;}
+ }catch{box?.remove();last=Date.now();}
  finally{busy=false;}
 }
 setInterval(refresh,10000);window.addEventListener('hashchange',()=>setTimeout(refresh,500));document.addEventListener('visibilitychange',()=>refresh());refresh();
@@ -3487,7 +3488,7 @@ document.addEventListener('click',async e=>{
  try{const p=await read(api);if(api.getCurrentUserId()!==owner)throw Error();const rows=entries(p);const duplicate=rows.some(r=>r.channelId===b.dataset.channelId&&Date.now()-Date.parse(r.at)<300000);if(!duplicate){rows.push({id:crypto.randomUUID(),at:new Date().toISOString(),channelId:b.dataset.channelId,channel:String(b.dataset.channelName).slice(0,180),program:String(b.dataset.program||'').slice(0,200),status:'open'});p.CustomPrefs={...p.CustomPrefs,reports:JSON.stringify(rows.slice(-100))};await write(api,p);}status.textContent='Saved for the owner. You can choose another channel.';b.textContent='Reported — thank you';}
  catch{status.textContent='Could not send. Please try again when the connection returns.';b.disabled=false;}finally{sending=false;}
 });
-async function refresh(){const api=window.ApiClient,u=api?.getCurrentUserId?.();if(!u)return;
+async function refresh(){const api=window.ApiClient,u=api?.getCurrentUserId?.();if(!u||owner==='-')return;
  if(adminUser!==u){adminUser=u;admin=false;document.querySelectorAll('.simple-inbox').forEach(n=>n.remove());try{admin=!!(await api.getCurrentUser()).Policy?.IsAdministrator;}catch{return;}}
  if(!admin||!/^#\/(home|dashboard)(?:[?&]|$)/.test(location.hash)||busy)return;
  const host=document.querySelector('.orbital-admin-tools');if(!host)return;const old=host.querySelector('.simple-inbox');if(old&&(Date.now()-last<60000||old.contains(document.activeElement)))return;
