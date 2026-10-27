@@ -36,7 +36,7 @@ def main():
     shutil.copytree(out/'service-dist/OrbitalSports',plugin/'service',dirs_exist_ok=True)
     shutil.copytree(B/'notices',plugin/'notices',dirs_exist_ok=True)
     files={p.relative_to(plugin).as_posix():{'sha256':sha(p),'bytes':p.stat().st_size} for p in plugin.rglob('*') if p.is_file() and p.name!='bundle.json'}
-    (plugin/'bundle.json').write_text(json.dumps({'name':'Orbital Sports','version':'1.0.3.0','service':'public.2','files':files},indent=2))
+    (plugin/'bundle.json').write_text(json.dumps({'name':'Orbital Sports','version':'1.0.4.0','service':'public.3','files':files},indent=2))
     web=out/'payload/fpmigrate/orbital_layer';web.mkdir(parents=True,exist_ok=True)
     manifest={'layer':'orbital-public','edition':'customer','supportedJellyfin':['12.0','12.2'],'files':{}}
     for line in (B.parent/'web/SHA256SUMS').read_text().splitlines():

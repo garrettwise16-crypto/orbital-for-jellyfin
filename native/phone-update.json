@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "package": "org.orbitalforjellyfin.phone",
+  "version": "2.7.3-orbital.75",
+  "version_code": 2070475,
+  "build": 75,
+  "release_tag": "native-v2026.10.27-preview.1",
+  "apk": "orbital-phone-75.apk",
+  "apk_url": "https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/download/native-v2026.10.27-preview.1/orbital-phone-75.apk",
+  "sha256": "aa10f29480f67a4efa10758db45821aac1008afd01aa8d1166ebaabaee34a764",
+  "bytes": 10512353,
+  "certificate_sha256": "ba2e31580e676566162aa84eb9d22a0e8f94612b6856484355a6eebe3fd1362b",
+  "source_url": "https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/download/native-v2026.10.27-preview.1/orbital-phone-75-source.zip",
+  "source_sha256": "663e13759122b31a43c1e43f1d9d7975edc77b8d5bba6f94affe08243668c7c6",
+  "notes": "Public preview: episode picker, restart, ten-second seeking, channels and free estimated trackers. Requires your own Jellyfin server and connected data sources. Faster live switching remains under validation."
+}

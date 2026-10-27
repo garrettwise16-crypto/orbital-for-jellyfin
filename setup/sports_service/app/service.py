@@ -28,8 +28,14 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 
 import espn_core as core
 import sources
+import tracker  # Verify packaged tracker modules before reporting healthy.
+import personal_library
+import integrations
+import catalogue_sources
+import catalogue_discovery
+import provider_catalogue
 
-VERSION = 'sports-ce-20261026-public.1'
+VERSION = 'sports-ce-20261027-public.2'
 SECRET = os.environ.get('ORBITAL_BRIDGE_SECRET', '')
 JELLYFIN = os.environ.get('JELLYFIN_URL', 'http://127.0.0.1:8096').rstrip('/')
 core.JELLYFIN = JELLYFIN
@@ -37,7 +43,7 @@ ROUTES = {'/sports/api/status', '/sports/api/events', '/sports/api/rankings', '/
           '/sports/api/preview', '/sports/api/recap', '/sports/api/boxscore', '/sports/api/pitch-flight',
           '/sports/api/batter-profile', '/sports/api/team-directory', '/sports/api/team', '/sports/api/teams',
           '/sports/api/team-preferences', '/sports/api/team-videos', '/sports/api/team-hub', '/sports/api/game-explorer',
-          '/sports/api/sources', '/sports/api/sources/addons'}
+          '/sports/api/sources', '/sports/api/sources/addons', '/sports/api/integrations', '/sports/api/catalogues/import', '/sports/api/catalogues/discover', '/sports/api/catalogue'}
 GAME = re.compile(r'/sports/api/game/([0-9]{1,12})/state')
 # Built on ESPN's public site data: answered only when the administrator switched that source on.
 ESPN_ONLY = {'/sports/api/tracker', '/sports/api/preview', '/sports/api/recap', '/sports/api/boxscore',
@@ -214,11 +220,13 @@ class Handler(BaseHTTPRequestHandler):
         if not self.bridged():
             return self.respond(403, {'error': 'Not available'})
         target = urlsplit(self.path).path
-        if target not in ('/sports/api/team-preferences', '/sports/api/sources', '/sports/api/sources/addons'):
+        if target.startswith('/sports/api/experience/v1/'):
+            return self.personal_request()
+        if target not in ('/sports/api/team-preferences', '/sports/api/sources', '/sports/api/sources/addons', '/sports/api/integrations', '/sports/api/catalogues/import'):
             return self.respond(404, {'error': 'Not found'})
         try:
             size = int(self.headers.get('Content-Length', '0'))
-            if size < 1 or size > (600 * 1024 if target.endswith('/addons') else 16384):
+            if size < 1 or size > (32 * 1024 * 1024 if target.endswith('/catalogues/import') else 600 * 1024 if target.endswith('/addons') else 16384):
                 return self.respond(413, {'error': 'Preferences too large'})
             self.body = json.loads(self.rfile.read(size))
         except (ValueError, OSError):
@@ -232,6 +240,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(200, {'alive': True, 'version': VERSION})
             if not self.bridged():
                 return self.respond(403, {'error': 'Not available'})
+            if path.path.startswith('/sports/api/experience/v1/'):
+                return self.personal_request()
             game = GAME.fullmatch(path.path)
             if path.path not in ROUTES and not game:
                 return self.respond(404, {'error': 'Not part of this edition'})
@@ -251,13 +261,59 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             self.respond(503, {'error': 'Sports is temporarily unavailable. Retry shortly.'})
 
+    def personal_request(self):
+        if not self.bridged():
+            return self.respond(403, {'error': 'Not available'})
+        try:
+            raw = b''
+            if self.command == 'POST':
+                size = int(self.headers.get('Content-Length', '0'))
+                if not 1 <= size <= 65536 or self.headers.get('Transfer-Encoding'):
+                    return self.respond(413, {'error': 'Request too large'})
+                raw = self.rfile.read(size)
+                if len(raw) != size:
+                    return self.respond(400, {'error': 'Incomplete request'})
+            def fetch(url, credential):
+                if not url.startswith(JELLYFIN + '/'):
+                    raise ValueError('Unexpected library origin')
+                return jellyfin_json(url[len(JELLYFIN):], credential)
+            code, data = personal_library.dispatch(self.command, self.path, dict(self.headers),
+                                                    raw, JELLYFIN, fetch)
+            return self.respond(code, data)
+        except (ValueError, OSError):
+            return self.respond(503, {'error': 'Personal library is temporarily unavailable'})
+
     def route(self, path, game, user, token):
         query = parse_qs(path.query, keep_blank_values=True)
         one = lambda key: (query.get(key) or [''])[0]
         p = path.path
+        if p == '/sports/api/catalogues/discover':
+            if not user.get('Policy', {}).get('IsAdministrator'):
+                return self.respond(403, {'error':'Only an administrator can connect catalogues'})
+            return self.respond(200, catalogue_discovery.page(one('provider'), one('kind'), int(one('page'))))
+        if p == '/sports/api/catalogues/import':
+            if not user.get('Policy', {}).get('IsAdministrator'):
+                return self.respond(403, {'error':'Only an administrator can connect catalogues'})
+            return self.respond(200, catalogue_sources.save(self.body) if hasattr(self,'body') else catalogue_sources.status())
+        if p == '/sports/api/catalogue':
+            def fetch(url, credential):
+                if not url.startswith(JELLYFIN+'/'):raise ValueError('Unexpected library origin')
+                return jellyfin_json(url[len(JELLYFIN):],credential)
+            return self.respond(200,provider_catalogue.catalogue(query,user,token,fetch,JELLYFIN))
+        if p == '/sports/api/integrations':
+            if not user.get('Policy', {}).get('IsAdministrator'):
+                return self.respond(403, {'error': 'Only an administrator can configure integrations'})
+            try:
+                data = integrations.save(self.body) if hasattr(self,'body') else integrations.masked()
+                return self.respond(200,data)
+            except Exception:
+                return self.respond(400, {'error': 'Could not verify or save the integration. Check the address, API key and service availability.'})
         if p == '/sports/api/status':
             plan = current_plan()
             return self.respond(200, {'edition': 'customer', 'version': VERSION, 'sports': True,
+                                      'personal_library': personal_library.enabled(),
+                                      'services': bool(os.environ.get('SPORTS_DATA_DIR') and catalogue_sources.status()['catalogues']),
+                                      'requests': bool(os.environ.get('SPORTS_DATA_DIR') and integrations.load().get('requests',{}).get('enabled')),
                                       'watched_game': 'estimated-delay-with-sync',
                                       'picture_lock': plan['plus']['picture-lock']['on'], 'plan': plan,
                                       'sources': [s['type'] for s in sources.load_settings()['sources']],
@@ -296,6 +352,16 @@ class Handler(BaseHTTPRequestHandler):
             import team_preferences
             status, data = team_preferences.access(user['Id'], getattr(self, 'body', None))
             return self.respond(status, data)
+        def tracker_response(model):
+            if one('view') != 'estimated':
+                return self.respond(200, model)
+            import estimated_view
+            try:
+                cutoff = float(one('cutoff')) if one('cutoff') else None
+                return self.respond(200, estimated_view.project(model, cutoff))
+            except (ValueError, OverflowError):
+                return self.respond(400, {'error': 'Choose a valid tracker time'})
+
         if p in ('/sports/api/events', '/sports/api/tracker') or game:
             core.LAST_SPORTS_USE[0] = time.time()
         espn = sources.espn_enabled()
@@ -315,7 +381,7 @@ class Handler(BaseHTTPRequestHandler):
             plays = sources.detail(event)
             view = sources.tracker_view(event, plays)
             if p == '/sports/api/tracker':
-                return self.respond(200, view)
+                return tracker_response(view)
             used = ', '.join(dict.fromkeys(event.get('sources_used') or [event['source']]))
             return self.respond(200, {**event, 'fetched_at': time.time(), 'stale': False, 'situation': None,
                                       'tracker_available': view['tracking_available'], 'line_score': view.get('line_score'),
@@ -379,7 +445,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.respond(400, {'error': 'Choose a supported league and event'})
             _, chosen = chosen_day(query, 400, 220)
             try:
-                return self.respond(200, tracker.CACHE.get(one('league'), one('event'), chosen.isoformat()))
+                return tracker_response(tracker.CACHE.get(one('league'), one('event'), chosen.isoformat()))
             except tracker.TrackerBusy:
                 return self.respond(429, {'error': 'Tracker capacity is busy. Hide an unused tracker and retry.', 'retry_after_seconds': 10})
             except tracker.TrackerNotFound:

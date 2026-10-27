@@ -381,6 +381,7 @@ $("btn-keep").addEventListener("click", (ev) => busy(ev.target, async () => {
 // Sports sources: the TV guide is built in; anything else is the person's own account and key.
 const KEEP = "__keep__";
 async function loadSources() {
+  loadIntegrations().catch(e => { $("integrations-out").textContent = e.message; });
   try {
     const cur = await api("GET", "/api/sports/sources");
     const db = (cur.sources || []).find((s) => s.type === "thesportsdb");
@@ -449,11 +450,52 @@ for (const id of ["src-sportsdb", "src-feed", "src-espn"]) {
   $(id).addEventListener("change", () => setSourcesDirty(true));
 }
 $("open-jf").addEventListener("click", ev => {
+  if (catalogueRunning) { ev.preventDefault(); showError("Your catalogues are still connecting. Wait for the result below before opening Jellyfin."); return; }
+  if ($("catalogue-file").files.length) {
+    ev.preventDefault();showError("Your catalogue has not been imported. Use Check and import catalogue first.");
+    $("btn-catalogue").scrollIntoView({block:"center"});$("btn-catalogue").focus();return;
+  }
+  if (S.integrationsDirty) {
+    ev.preventDefault();
+    showError("Your integration settings have not been saved. Use Save and check integration first.");
+    $("btn-integrations").scrollIntoView({block:"center"}); $("btn-integrations").focus();
+    return;
+  }
   if (!S.sourcesDirty) return;
   ev.preventDefault();
   showError("Your source settings have not been saved. Use Save and check sources first, then open Jellyfin.");
   $("btn-sources").scrollIntoView({block:"center"}); $("btn-sources").focus();
 });
+async function loadIntegrations() {
+  const value = await api("GET", "/api/integrations");
+  if (S.integrationsDirty) return;
+  $("integrations-card").hidden = false;
+  $("integration-personal").checked = value.personal_library === true;
+  $("integration-requests").checked = value.requests.enabled === true;
+  $("integration-url").value = value.requests.url || "";
+  $("integration-key").value = "";
+  $("integration-key").placeholder = value.requests.key_saved ? "Key saved on your server; leave blank to keep it" : "Paste your Seerr API key";
+}
+for (const id of ["integration-personal", "integration-requests", "integration-url", "integration-key"]) {
+  $(id).addEventListener("input", () => {
+    S.integrationsDirty = true;
+    $("integrations-out").textContent = "Unsaved changes — save below before opening Jellyfin.";
+  });
+}
+$("btn-integrations").addEventListener("click", ev => busy(ev.target, async () => {
+  const ids = ["integration-personal", "integration-requests", "integration-url", "integration-key"];
+  const key = $("integration-key").value.trim();
+  const settings = {personal_library:$("integration-personal").checked,
+    requests:{enabled:$("integration-requests").checked, url:$("integration-url").value.trim(), ...(key ? {key} : {})}};
+  ids.forEach(id => { $(id).disabled=true; });
+  $("integrations-out").textContent = settings.requests.enabled ? "Connecting to Seerr and checking the API key before saving…" : "Saving your library settings…";
+  try {
+    await api("POST", "/api/integrations", settings);
+    S.integrationsDirty=false; await loadIntegrations();
+    $("integrations-out").textContent = settings.requests.enabled ? "Saved and connected. Linked Jellyfin users can now request titles in Orbital." : "Saved. Your library features are ready.";
+  } catch (e) { $("integrations-out").textContent="Not saved: "+e.message; }
+  finally { ids.forEach(id => { $(id).disabled=false; }); }
+}));
 async function checkSources() {
   await api("POST", "/api/sports/sources/check");
   const result = await waitJob(p => { $("sources-out").textContent = p.message || "Checking connections…"; });
@@ -621,3 +663,29 @@ $("install-features").addEventListener("click", ev => busy(ev.target, async () =
     await detect();
   } catch (e) { showError(e.message); }
 })();
+
+$("btn-catalogue").addEventListener("click", ev => busy(ev.target, async () => {
+  const file=$("catalogue-file").files[0];
+  if (!file) throw new Error("Choose a catalogue export first.");
+  if(file.size>32*1024*1024) throw new Error("Choose a catalogue smaller than 32 MB.");
+  $("catalogue-out").textContent="Reading and checking your catalogue…";
+  try {
+    const data=JSON.parse(await file.text());
+    const saved=await api("POST","/api/catalogues/import",data);
+    $("catalogue-file").value="";
+    $("catalogue-out").textContent=`Connected ${saved.provider}: ${saved.entries.toLocaleString()} titles. Services will appear when you reopen Jellyfin.`;
+  } catch(e) { $("catalogue-out").textContent="Not imported: "+e.message; }
+}));
+
+let catalogueRunning = false;
+$("btn-connect-catalogue").addEventListener("click", ev => busy(ev.target, async () => {
+  if (S.integrationsDirty) { $("btn-integrations").focus(); throw new Error("Save and check your Seerr connection above first."); }
+  catalogueRunning = true;
+  $("catalogue-connect-out").textContent = "Checking your saved Seerr connection…";
+  try {
+    await api("POST", "/api/catalogues/connect", {provider:$("catalogue-provider").value});
+    const result = await waitJob(p => { $("catalogue-connect-out").textContent = p.message || "Connecting catalogues…"; });
+    $("catalogue-connect-out").textContent = "Connected: " + result.catalogues.map(c => `${c.provider} (${c.entries.toLocaleString()} titles)`).join(", ") + ". Open Jellyfin below to use Services.";
+  } catch(e) { $("catalogue-connect-out").textContent = "Needs attention: " + e.message + ". Previously saved catalogues remain available; retry this service when ready."; }
+  finally { catalogueRunning = false; }
+}));

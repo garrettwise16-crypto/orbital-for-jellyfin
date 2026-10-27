@@ -3051,7 +3051,7 @@ if(typeof module!=='undefined')module.exports=global.OrbitalPersonal;
       nativeDownload.querySelectorAll('.orbital-download-label').forEach(n=>n.remove());
       if(downloadable){nativeDownload.setAttribute('title','Download file');nativeDownload.setAttribute('aria-label','Download file');nativeDownload.append(el('span','orbital-download-label','Download'));}
     }
-    if(cloudPointer&&policy?.EnableContentDownloading&&item.CanDownload&&['Movie','Episode'].includes(item.Type)){
+    if(window.OrbitalEdition?.features?.downloads&&cloudPointer&&policy?.EnableContentDownloading&&item.CanDownload&&['Movie','Episode'].includes(item.Type)){
       const button=el('button','orbital-chip orbital-cloud-download');button.type='button';button.append(icon('download'),el('span','orbital-download-label','Download'));
       button.setAttribute('title','Download video file');button.setAttribute('aria-label','Download video file');
       button.addEventListener('click',async()=>{

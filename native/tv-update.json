@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "package": "org.orbitalforjellyfin.tv",
+  "version": "0.19.10-orbital.301",
+  "version_code": 191301,
+  "build": 301,
+  "release_tag": "native-v2026.10.27-preview.1",
+  "apk": "orbital-tv-preview-0.19.10-301.apk",
+  "apk_url": "https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/download/native-v2026.10.27-preview.1/orbital-tv-preview-0.19.10-301.apk",
+  "sha256": "5283d474017ca2d9871f00b4be2675a0d953fdba24efa66dd0978841a430c4bf",
+  "bytes": 28940932,
+  "certificate_sha256": "ba2e31580e676566162aa84eb9d22a0e8f94612b6856484355a6eebe3fd1362b",
+  "source_url": "https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/download/native-v2026.10.27-preview.1/orbital-tv-301-source.zip",
+  "source_sha256": "bd00fe9e5d9eecfaddae6ef225b2ea665229b6b8d2d0556f5a5c94c2cd3b82da",
+  "notes": "Public preview: episode picker, restart, ten-second seeking, channels and free estimated trackers. Requires your own Jellyfin server and connected data sources. Faster live switching remains under validation."
+}

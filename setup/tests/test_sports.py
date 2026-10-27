@@ -293,7 +293,7 @@ class ServiceTests(unittest.TestCase):
         self.assertNotIn("legacy", {kind for kind, _ in self.jf.seen})
 
     def test_private_services_are_not_part_of_this_edition(self):
-        for path in ("/sports/api/experience/v1/picture-estimate", "/sports/api/catalogue", "/sports/api/capacity",
+        for path in ("/sports/api/experience/v1/picture-estimate", "/sports/api/capacity",
                      "/sports/api/playback-report", "/sports/api/library-tags"):
             self.assertEqual(self.get(path)[0], 404, path)
 

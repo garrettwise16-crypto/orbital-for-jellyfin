@@ -167,6 +167,28 @@
       <div class="row"><button id="btn-keep">Keep it on this PC</button></div>
       <p id="keep-out" role="status" class="sub"></p>
     </div>
+    <div class="card soft" id="integrations-card" hidden>
+      <h3>Your library and requests</h3>
+      <label class="inline"><input id="integration-personal" type="checkbox" checked> Personal library — My List, hidden titles, recommendations, shelves and playback preferences</label>
+      <p class="sub">These features use your existing Jellyfin library. Each person's choices stay with their own account; no extra API key is needed.</p>
+      <label class="inline"><input id="integration-requests" type="checkbox"> Connect my Seerr server for movie and show requests</label>
+      <p class="sub">Optional: enter your Seerr address, then copy its API key from Settings → General. Users sign into Seerr with their Jellyfin account once; Orbital discovers that link automatically and keeps Seerr's approval rules.</p>
+      <label>Seerr server address<input id="integration-url" type="url" placeholder="http://localhost:5055" autocomplete="off"></label>
+      <label>Seerr API key<input id="integration-key" type="password" autocomplete="new-password"></label>
+      <button id="btn-integrations">Save and check integration</button>
+      <p id="integrations-out" role="status" class="sub"></p>
+      <details><summary>Connect a service catalogue</summary>
+        <p>Already connected Seerr above? Choose a service and we will download its US title listings, check them, and connect Services on web, Phone and TV. No export file needed. This may take several minutes; progress appears below. Run this again whenever you want to refresh listings.</p>
+        <label>Service<select id="catalogue-provider"><option value="all">All supported services</option><option value="netflix">Netflix</option><option value="apple-tv">Apple TV</option><option value="disney-plus">Disney+</option><option value="hulu">Hulu</option><option value="max">Max</option><option value="prime-video">Prime Video</option><option value="peacock">Peacock</option><option value="paramount-plus">Paramount+</option></select></label>
+        <button id="btn-connect-catalogue">Connect catalogues with Seerr</button>
+        <p id="catalogue-connect-out" role="status" class="sub"></p>
+        <p class="sub">Metadata from TMDB; availability powered by JustWatch. Listings do not include subscriptions or playable video. <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a> · <a href="https://www.justwatch.com/" target="_blank" rel="noopener">JustWatch</a></p>
+        <p>Already have a US catalogue export from your metadata source? Choose its JSON file below. We check the titles, dates and artwork paths, then connect the same Services browser on web, Phone and TV. This adds listings, not streaming subscriptions or playable video.</p>
+        <label>Catalogue export<input id="catalogue-file" type="file" accept="application/json,.json"></label>
+        <button id="btn-catalogue">Check and import catalogue</button>
+        <p id="catalogue-out" role="status" class="sub"></p>
+      </details>
+    </div>
     <div class="card soft" id="sources-card" hidden>
       <h2>Where Sports gets its games</h2>
       <p>Sports shows the games in your own TV guide. Connect a source for scores and more; each one uses your own account, and Orbital never charges for it.</p>

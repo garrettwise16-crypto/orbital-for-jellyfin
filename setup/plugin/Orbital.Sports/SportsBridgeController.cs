@@ -68,20 +68,19 @@ public sealed partial class SportsBridgeController : ControllerBase
         request.Headers.TryAddWithoutValidation("X-Orbital-Bridge", host.Secret);
         if (method == HttpMethod.Post)
         {
-            var limit = path == "sources/addons" ? MaxAddonBytes : MaxRequestBytes;
+            var limit = path == "catalogues/import" ? 32 * 1024 * 1024 : path == "sources/addons" ? MaxAddonBytes : MaxRequestBytes;
             if (Request.ContentLength > limit)
             {
                 return Json(413, "{\"error\":\"Request too large\"}");
             }
 
-            using var buffer = new MemoryStream();
-            await Request.Body.CopyToAsync(buffer, HttpContext.RequestAborted).ConfigureAwait(false);
-            if (buffer.Length > limit)
+            var input = await ReadBounded(Request.Body, limit, HttpContext.RequestAborted).ConfigureAwait(false);
+            if (input is null)
             {
                 return Json(413, "{\"error\":\"Request too large\"}");
             }
 
-            request.Content = new ByteArrayContent(buffer.ToArray());
+            request.Content = new ByteArrayContent(input);
             request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
         }
 
@@ -93,8 +92,9 @@ public sealed partial class SportsBridgeController : ControllerBase
                 return Json(502, "{\"error\":\"Sports response too large\"}");
             }
 
-            var body = await response.Content.ReadAsByteArrayAsync(HttpContext.RequestAborted).ConfigureAwait(false);
-            if (body.Length > MaxResponseBytes)
+            using var responseStream = await response.Content.ReadAsStreamAsync(HttpContext.RequestAborted).ConfigureAwait(false);
+            var body = await ReadBounded(responseStream, MaxResponseBytes, HttpContext.RequestAborted).ConfigureAwait(false);
+            if (body is null)
             {
                 return Json(502, "{\"error\":\"Sports response too large\"}");
             }
@@ -109,6 +109,19 @@ public sealed partial class SportsBridgeController : ControllerBase
         catch (TaskCanceledException) when (!HttpContext.RequestAborted.IsCancellationRequested)
         {
             return Json(504, "{\"error\":\"Sports took too long. Retry shortly.\"}");
+        }
+    }
+
+    private static async Task<byte[]?> ReadBounded(Stream stream, int limit, CancellationToken cancellation)
+    {
+        using var output = new MemoryStream();
+        var chunk = new byte[8192];
+        while (true)
+        {
+            var read = await stream.ReadAsync(chunk.AsMemory(0, Math.Min(chunk.Length, limit + 1 - (int)output.Length)), cancellation).ConfigureAwait(false);
+            if (read == 0) return output.ToArray();
+            output.Write(chunk, 0, read);
+            if (output.Length > limit) return null;
         }
     }
 

@@ -5,8 +5,8 @@
  *   Sports entry points appear only after the plugin answers for the signed-in person.
  *   The game you are watching keeps its tracker on an estimated delay with one-press "Sync to your picture".
  * - A basic player bridge connects the shell to stock Jellyfin's player (Sports Watch, watched-game tracker).
- * - Everything else from the owner's private services (catalogue, experience service, picture lock, requests,
- *   downloads, playback reports) is answered "unavailable" instantly, with no network traffic, so it stays hidden.
+ * - Personal library, requests and service catalogues use configured same-server adapters.
+ *   Optional integrations appear after the server confirms they are connected.
  * - ?orbital=off in the address bar shows stock Jellyfin for that page load.
  * Not affiliated with or endorsed by the Jellyfin project. */
 (function () {
@@ -26,6 +26,7 @@
       var url = new URL(u, location.href);
       if (url.origin !== location.origin) return false;
       if (!BLOCKED.test(url.pathname)) return false;
+      if (/\/sports\/api\/experience\/v1\//.test(url.pathname) && window.OrbitalEdition.features.experience) return false;
       // Sports data goes to the server only once the plugin has answered the status check (or did last visit);
       // until then it is answered locally, so a server without the plugin sees no sports requests at all.
       return !(SPORTS.test(url.pathname) && (STATUS.test(url.pathname) || window.OrbitalEdition.features.sports));
@@ -74,6 +75,16 @@
         .then(function (r) {
           var on = !!(r && r.sports === true);
           window.OrbitalEdition.features.sports = on;
+          window.OrbitalEdition.features.services = !!(r && r.services);
+          root.classList.toggle('orbital-ce-services', window.OrbitalEdition.features.services);
+          var personal = !!(r && r.personal_library === true);
+          window.OrbitalEdition.features.experience = personal;
+          window.OrbitalEdition.features.requests = !!(r && r.requests === true && personal);
+          root.classList.toggle('orbital-ce-requests', window.OrbitalEdition.features.requests);
+          window.OrbitalConfig = window.OrbitalConfig || {};
+          window.OrbitalConfig.experienceService = personal;
+          window.OrbitalExperienceConfig = { enabled: personal };
+          root.classList.toggle('orbital-ce-personal', personal);
           window.OrbitalEdition.sports = on ? { version: r.version, watchedGame: r.watched_game } : null;
           root.classList.toggle('orbital-ce-sports', on);
           remember(on);
@@ -81,6 +92,13 @@
         .catch(function (e) {
           if (e && e.status === 404) { remember(false); }
           window.OrbitalEdition.features.sports = false;
+          window.OrbitalEdition.features.services = false;
+          root.classList.remove('orbital-ce-services');
+          window.OrbitalEdition.features.experience = false;
+          window.OrbitalEdition.features.requests = false;
+          root.classList.remove('orbital-ce-requests');
+          window.OrbitalExperienceConfig = { enabled: false };
+          root.classList.remove('orbital-ce-personal');
           root.classList.remove('orbital-ce-sports');
           // Starting up (503): look again shortly. Not installed (404): stay hidden until the next sign-in.
           if (e && e.status === 503) sportsFor = null;

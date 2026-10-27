@@ -326,6 +326,37 @@ class App:
     def sports_sources_get(self, _q, _b):
         return self.engine.sports_sources()
 
+    def catalogues_import(self, _q, body):
+        if not self.engine.jf:
+            raise ValueError("Connect Jellyfin first.")
+        return self.engine.jf.call("POST", "/sports/api/catalogues/import", body=body, timeout=30, retries=0)
+
+    def catalogues_connect(self, _q, body):
+        from . import catalogues
+        jf = self.engine.jf
+        if not jf:
+            raise ValueError("Connect Jellyfin first.")
+        provider = (body or {}).get('provider')
+        if provider not in (*catalogues.PROVIDERS, 'all'):
+            raise ValueError("Choose a catalogue")
+        def check_cancel():
+            if self.engine.cancel_event.is_set():
+                raise Cancelled()
+        if not self.job.start('catalogues', lambda: catalogues.connect(jf, provider,
+                lambda message: self.engine._p('catalogues', message=message), check_cancel)):
+            raise ValueError("Another setup step is running. Wait for it to finish.")
+        return {'started': True}
+
+    def integrations_get(self, _q, _b):
+        if not self.engine.jf:
+            raise ValueError("Connect Jellyfin first.")
+        return self.engine.jf.call("GET", "/sports/api/integrations", timeout=10, retries=0)
+
+    def integrations_set(self, _q, body):
+        if not self.engine.jf:
+            raise ValueError("Connect Jellyfin first.")
+        return self.engine.jf.call("POST", "/sports/api/integrations", body=body or {}, timeout=15, retries=0)
+
     def sports_sources_set(self, _q, b):
         return self.engine.sports_sources(b or {})
 
@@ -417,6 +448,9 @@ class App:
         ("GET", "/api/sports"): "sports_state", ("POST", "/api/sports/remove"): "sports_remove",
         ("GET", "/api/sports/sources"): "sports_sources_get", ("POST", "/api/sports/sources"): "sports_sources_set", ("GET", "/api/sports/addons"): "sports_addons_get", ("POST", "/api/sports/addons"): "sports_addons_post", ("POST", "/api/users/apply"): "users_apply",
         ("POST", "/api/sports/sources/check"): "sports_sources_check",
+        ("POST", "/api/catalogues/import"): "catalogues_import",
+        ("POST", "/api/catalogues/connect"): "catalogues_connect",
+        ("GET", "/api/integrations"): "integrations_get", ("POST", "/api/integrations"): "integrations_set",
         ("POST", "/api/preview"): "preview", ("POST", "/api/apply"): "apply", ("POST", "/api/cancel"): "cancel",
         ("POST", "/api/rollback"): "rollback", ("POST", "/api/undo-setup"): "undo_setup",
         ("GET", "/api/report"): "report", ("POST", "/api/forget"): "forget", ("POST", "/api/quit"): "quit",
@@ -466,7 +500,7 @@ def make_handler(app: App):
             if not hmac.compare_digest(self.headers.get("X-FP-Key", ""), app.key):
                 return self._send(403, {"error": "forbidden"})
             n = int(self.headers.get("Content-Length") or 0)
-            if n > (ADDON_BODY if u.path == "/api/sports/addons" else MAX_BODY):
+            if n > (32 * 1024 * 1024 if u.path == "/api/catalogues/import" else ADDON_BODY if u.path == "/api/sports/addons" else MAX_BODY):
                 if n <= 16 * MAX_BODY:
                     self.rfile.read(n)  # drain so the client receives the refusal instead of a reset
                 self.close_connection = True

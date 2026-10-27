@@ -48,6 +48,9 @@ ALLOW = [
 
 
 def allowed(rule, path, text):
+    # Existing request API names a link to a separately authenticated request site.
+    # This is a product navigation contract, not an agent instruction/document.
+    if rule == 'agent handoff' and path.as_posix() == 'setup/sports_service/app/experience_connected.py' and text == 'handoff': return True
     # Required upstream copyright/contact notices, retained verbatim.
     license_contacts = {'setup/notices/Python-LICENSE.txt': {'jseward@acm.org'},
                         'setup/notices/zlib-LICENSE.txt': {'jloup@gzip.org', 'madler@alumni.caltech.edu'}}
