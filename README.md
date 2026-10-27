@@ -2,7 +2,7 @@
 
 Orbital is a set of add-ons that make a self-hosted Jellyfin server feel like a streaming service: a cinematic web interface, an Android TV app and a live sports layer.
 
-**Status:** private staging. It is being prepared piece by piece, and nothing has been published yet.
+**Status:** first public release. The live sports layer is published first; the web interface and Android TV app follow as they are cleaned up for sharing.
 
 | Piece | Folder | State |
 |---|---|---|
