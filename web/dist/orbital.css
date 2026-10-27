@@ -1985,3 +1985,9 @@ html body .otv-all-filters .otv-af-field input,html body .otv-all-filters .otv-a
  .otv-sports-dialog .gc2-nick{font-size:15px}
  .otv-sports-dialog .gc2-score{font-size:32px}
 }
+
+@media(max-width:600px){
+ .otv-sports-dialog .otv-game-topline{display:flex!important;flex-wrap:wrap!important;gap:8px!important;align-items:center}
+ .otv-sports-dialog .otv-game-topline .otv-game-state{order:1;flex:1 0 100%!important;width:100%!important;min-width:0!important;white-space:normal!important;overflow-wrap:anywhere}
+ .otv-sports-dialog .otv-game-topline>button{flex:none;max-width:100%}
+}

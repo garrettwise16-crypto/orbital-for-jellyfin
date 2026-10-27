@@ -8818,10 +8818,20 @@ function retire(a){
   Promise.resolve().then(()=>a.pm.stop(a.p)).catch(error=>{restore();reject(error);});
  });
 }
+function switchFailure(a,status,message){
+ if(window.ApiClient!==a.api||a.api.getCurrentUserId()!==a.user||a.api.serverId()!==a.server||a.api.accessToken()!==a.token)return;
+ const player=a.pm.getCurrentPlayer?.();if(player&&a.pm.currentItem(player)&&!owned(a))return;
+ if(status.isConnected){status.textContent=message;status.setAttribute('role','alert');return;}
+ close();const d=el('dialog',null,'orbital-player-settings orbital-basic-channel-dialog');dialog=d;
+ d.setAttribute('role','alertdialog');d.setAttribute('aria-label','Channel switch paused');
+ const done=el('button','Close','otv-category');done.onclick=close;
+ d.append(el('h2','Channel switch paused'),el('p',message),done);document.body.append(d);d.showModal();done.focus();
+ d.addEventListener('close',()=>{d.remove();if(dialog===d)dialog=null;},{once:true});
+}
 async function switchTo(a,item,status){
  if(!owned(a))return;
  if(item.Id===a.item.Id){close();return;}
- status.textContent='Closing the current channel…';
+ status.textContent='Closing the current channel…';let opening=false;
  try{
   // Keep a single stop promise for this exact playback. An uncertain close is not retried automatically.
   if(!retirement)retirement=retire(a);
@@ -8829,8 +8839,8 @@ async function switchTo(a,item,status){
   if(window.ApiClient!==a.api||a.api.getCurrentUserId()!==a.user||a.api.serverId()!==a.server||a.api.accessToken()!==a.token)return;
   if(a.pm.getCurrentPlayer?.()===a.p && a.pm.currentItem(a.p))throw Error('close not confirmed');
   if(a.pm.getCurrentPlayer?.() && a.pm.currentItem(a.pm.getCurrentPlayer()))return; // Another playback already owns the screen.
-  close();await a.pm.play({ids:[item.Id],serverId:a.server,fullscreen:true});
- }catch{status.textContent='The current channel has not confirmed it stopped. Use the player’s Stop or Back control before trying another channel.';}
+  opening=true;close();await a.pm.play({ids:[item.Id],serverId:a.server,fullscreen:true});
+ }catch{switchFailure(a,status,opening?'The previous channel stopped, but the selected channel could not start. Close this message and choose a channel again.':'The current channel has not confirmed it stopped. No new channel was opened. Close this message and use the player’s Stop or Back control if playback is still active.');}
 }
 async function browse(guide){
  const a=active;if(!owned(a))return;close();
@@ -8862,7 +8872,7 @@ async function browse(guide){
 }
 function refresh(){
  const next=read();
- if(!same(active,next)){
+ if((active||next)&&!same(active,next)){
   close();document.getElementById('orbital-basic-channel-actions')?.remove();retirement=null;active=next;
   if(next){
    const key=next.server+'|'+next.user;
