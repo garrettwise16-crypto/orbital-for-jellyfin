@@ -36,7 +36,7 @@ import catalogue_discovery
 import catalogue_refresh
 import provider_catalogue
 
-VERSION = 'sports-ce-20261027-public.5'
+VERSION = 'sports-ce-20261027-public.6'
 SECRET = os.environ.get('ORBITAL_BRIDGE_SECRET', '')
 JELLYFIN = os.environ.get('JELLYFIN_URL', 'http://127.0.0.1:8096').rstrip('/')
 core.JELLYFIN = JELLYFIN

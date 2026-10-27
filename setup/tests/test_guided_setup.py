@@ -35,6 +35,11 @@ class GuidedSetup(unittest.TestCase):
         import espn_core
         raw={'id':'1','date':'2026-10-27T00:00:00Z','competitions':[{'competitors':[{'team':{'displayName':'Example','logo':'https://images.example.test/team.png'}}]}]}
         self.assertEqual(espn_core.normalize(raw,'NBA')['teams'][0]['logo'],'https://images.example.test/team.png')
+        event=espn_core.normalize(raw,'NBA')
+        self.assertEqual(espn_core.card_metadata_event(event)['teams'][0]['logo'],'https://images.example.test/team.png')
+        import generic_reference
+        metadata=generic_reference.metadata({'league':'NBA','kind':'basketball','event_id':'1','teams':[{'id':'1','side':'home','logo':'https://images.example.test/team.png'},{'id':'2','side':'away'}]},'NBA')
+        self.assertEqual(metadata['teams'][0]['logo'],'https://images.example.test/team.png')
         raw['competitions'][0]['competitors'][0]['team']['logo']='javascript:alert(1)'
         self.assertNotIn('logo',espn_core.normalize(raw,'NBA')['teams'][0])
 

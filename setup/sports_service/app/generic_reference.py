@@ -4,6 +4,7 @@ No source acquisition or timing policy lives here. Existing three-sport
 references are returned untouched. Current scores and aggregate state are
 never exported as historical row facts.
 """
+from connected_artwork import image_url
 import copy,math,re
 
 LEAGUES={'NBA':'basketball','WNBA':'basketball','NHL':'hockey','MLS':'soccer'}
@@ -82,6 +83,8 @@ def metadata(value,league):
             if label:item[key]=label
         for key in ('color','alt_color'):
             if isinstance(row.get(key),str) and re.fullmatch(r'#[0-9a-fA-F]{6}',row[key]):item[key]=row[key]
+        logo=image_url(row.get('logo'))
+        if logo:item['logo']=logo
         teams.append(item)
     if len({t['id'] for t in teams})!=2 or {t['side'] for t in teams}!={'away','home'}:raise ValueError('generic reference metadata team identity')
     return {'schema':1,'event':str(value['event_id']),'league':league,'kind':LEAGUES[league],'teams':teams,

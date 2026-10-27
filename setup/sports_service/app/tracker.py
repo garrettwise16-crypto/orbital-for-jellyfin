@@ -1,4 +1,5 @@
 """Bounded public ESPN metadata normalization. No media, paid source or viewer state."""
+from connected_artwork import team_logo
 import copy
 import hashlib
 import os
@@ -451,7 +452,7 @@ def normalize(raw,league,event_id,fetched_at=None,calibrations=None):
     teams=[]
     for c in comp.get('competitors') or []:
         t=c.get('team') or {};ident=identity(t.get('id') or c.get('id'))
-        if ident:teams.append({'id':ident,'name':text(t.get('displayName'),100),'abbreviation':text(t.get('abbreviation'),12),
+        if ident:teams.append({'logo':team_logo(t),'id':ident,'name':text(t.get('displayName'),100),'abbreviation':text(t.get('abbreviation'),12),
             'side':c.get('homeAway') if c.get('homeAway') in ('home','away') else None,'score':text(c.get('score'),20) if state in ('live','final') else None,
             'color':'#'+str(t.get('color')).lower() if re.fullmatch(r'[0-9a-fA-F]{6}',str(t.get('color') or '')) else None,
             'alt_color':'#'+str(t.get('alternateColor')).lower() if re.fullmatch(r'[0-9a-fA-F]{6}',str(t.get('alternateColor') or '')) else None})
