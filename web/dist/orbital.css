@@ -1991,3 +1991,6 @@ html body .otv-all-filters .otv-af-field input,html body .otv-all-filters .otv-a
  .otv-sports-dialog .otv-game-topline .otv-game-state{order:1;flex:1 0 100%!important;width:100%!important;min-width:0!important;white-space:normal!important;overflow-wrap:anywhere}
  .otv-sports-dialog .otv-game-topline>button{flex:none;max-width:100%}
 }
+/* A reused stock video route can restore the browsing background on Stop.
+   Keep that background clear while its full-screen video container remains. */
+html.ob5-player-route body:has(>.videoPlayerContainer:not(.hide)) .backgroundContainer{background:transparent!important}

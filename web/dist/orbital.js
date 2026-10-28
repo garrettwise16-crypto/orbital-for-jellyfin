@@ -8805,17 +8805,18 @@ function retire(a){
  const original=a.api.reportPlaybackStopped;
  if(typeof original!=='function'||!a.session)return Promise.reject(Error('stop acknowledgement unavailable'));
  return new Promise((resolve,reject)=>{
-  let timer,matched=false;
+  let timer,matched=false,acknowledged=false,stopped=false;
+  const finish=()=>{if(acknowledged&&stopped){restore();resolve();}};
   const restore=()=>{clearTimeout(timer);if(a.api.reportPlaybackStopped===wrapped)a.api.reportPlaybackStopped=original;};
   function wrapped(info){
    const exact=info?.PlaySessionId===a.session&&info?.ItemId===a.item.Id;
    let request;try{request=original.apply(this,arguments);}catch(error){if(exact){restore();reject(error);}throw error;}
-   if(exact&&!matched){matched=true;Promise.resolve(request).then(()=>{restore();resolve();},error=>{restore();reject(error);});}
+   if(exact&&!matched){matched=true;Promise.resolve(request).then(()=>{acknowledged=true;finish();},error=>{restore();reject(error);});}
    return request;
   }
   a.api.reportPlaybackStopped=wrapped;
   timer=setTimeout(()=>{restore();reject(Error('stop acknowledgement timed out'));},15000);
-  Promise.resolve().then(()=>a.pm.stop(a.p)).catch(error=>{restore();reject(error);});
+  Promise.resolve().then(()=>a.pm.stop(a.p)).then(()=>{stopped=true;finish();},error=>{restore();reject(error);});
  });
 }
 function switchFailure(a,status,message){

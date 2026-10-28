@@ -16,3 +16,13 @@ test('rejected stop report remains a failed channel switch and restores API',asy
  const waiting=retire(a);api.reportPlaybackStopped({ItemId:'old',PlaySessionId:'session'}).catch(()=>{});
  await assert.rejects(waiting,/unacknowledged/);assert.equal(api.reportPlaybackStopped,original);
 });
+
+test('server acknowledgement does not release a player still closing its screen',async()=>{
+ let finishStop,finished=false;
+ const api={reportPlaybackStopped:async()=>{}};
+ const a={api,item:{Id:'old'},session:'session',p:{},pm:{stop:()=>new Promise(r=>finishStop=r)}};
+ const waiting=retire(a).then(()=>finished=true);await Promise.resolve();
+ await api.reportPlaybackStopped({ItemId:'old',PlaySessionId:'session'});
+ await Promise.resolve();assert.equal(finished,false);
+ finishStop();await waiting;assert.equal(finished,true);
+});
