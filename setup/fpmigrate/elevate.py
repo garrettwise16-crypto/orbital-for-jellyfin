@@ -60,3 +60,25 @@ def needs_elevation(webdir: Path) -> bool:
         return False
     except PermissionError:
         return True
+
+
+def run_direct_action(payload: dict) -> dict:
+    """One named HTTPS operation through ordinary UAC; tokens stay out of argv."""
+    with tempfile.TemporaryDirectory(prefix='orbital-https-') as tmp:
+        request=Path(tmp)/'request.json';result=Path(tmp)/'result.json'
+        request.write_text(json.dumps(payload),encoding='utf-8')
+        exe,params=_self_command(['direct-https-helper','--request',str(request),'--result',str(result)])
+        info=_ShellExecuteInfo();info.cbSize=ctypes.sizeof(info);info.fMask=0x00000040
+        info.lpVerb,info.lpFile,info.lpParameters,info.nShow='runas',exe,params,0
+        if not ctypes.windll.shell32.ShellExecuteExW(ctypes.byref(info)):
+            raise PermissionError('Windows administrator permission was declined. HTTPS was not configured.')
+        try:
+            wait=ctypes.windll.kernel32.WaitForSingleObject(info.hProcess,180_000)
+            if wait!=0:
+                raise RuntimeError('The Windows step is still pending. Check the permission prompt and retry after it finishes.')
+        finally:
+            ctypes.windll.kernel32.CloseHandle(info.hProcess)
+        if not result.exists():raise RuntimeError('The Windows HTTPS step did not return a result. Retry to inspect its state.')
+        value=json.loads(result.read_text(encoding='utf-8'))
+        if value.get('error'):raise RuntimeError(value['error'])
+        return value

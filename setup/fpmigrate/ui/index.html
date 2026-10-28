@@ -218,15 +218,45 @@
     </div>
     <div class="card soft" id="remote-access-card">
       <h3>Watch away from home <span class="sub">Optional</span></h3>
-      <p>Watch your library when you travel. We'll set up a private connection and help you add your phone. Your computer needs to stay on while you watch.</p>
-      <p class="sub">This uses Tailscale, a separate connection app with its own account and plan limits. Only devices you approve can connect. Your Jellyfin password is still required.</p>
-      <button class="primary" data-remote="advance" id="remote-start">Set up watching away from home</button>
+      <p>Use one secure address in Jellyfin or Orbital on your phone, TV or browser. Your server must stay on while you watch.</p>
+      <label>Connection method<select id="remote-method"><option value="direct">Recommended: your own HTTPS address</option><option value="private">Private connection with Tailscale</option></select></label>
+      <div id="remote-direct">
+        <p>No extra connection app is needed on viewing devices. We'll set up HTTPS, automatic startup and certificate renewal. You'll approve one Windows prompt and make two entries in your router.</p>
+        <ol id="remote-steps"><li>Check your network</li><li>Choose your address and install HTTPS</li><li>Connect your router</li><li>Test away from home</li></ol>
+        <button data-remote="direct-assess">1. Check my network</button>
+        <button data-remote="direct-resume">Resume my saved connection</button>
+        <p class="sub">The network check asks ipify for this connection's public IP address. It sends no library information or passwords.</p>
+        <div id="remote-network" hidden>
+          <p id="remote-network-details"></p>
+          <a id="remote-router" class="button" hidden target="_blank" rel="noopener noreferrer">Open my router</a>
+          <label>Internet / WAN IPv4 address shown in your router (optional)<input id="remote-wan" placeholder="Copy the address from the router's Internet page" autocomplete="off"></label>
+          <p class="sub">Comparing this address helps identify ISP shared connections. Leave it blank if you cannot find it; we will still check the finished connection.</p>
+          <button data-remote="direct-assess">Compare and check again</button>
+        </div>
+        <fieldset id="remote-address-step" hidden><legend>2. Choose your address</legend>
+          <label>Address option<select id="remote-dns-mode"><option value="duckdns">Free name with DuckDNS and automatic updates</option><option value="existing">I have my own domain or address updater</option></select></label>
+          <div id="remote-duckdns"><p><a href="https://www.duckdns.org/" target="_blank" rel="noopener noreferrer">Open DuckDNS</a>, sign in, and add a name you like. Copy the full name and your account token below, then come back here. Your token is used only for DuckDNS address updates and is stored encrypted on this computer.</p>
+          <label>DuckDNS token<input id="remote-dns-token" type="password" autocomplete="off" spellcheck="false"></label></div>
+          <label>Your server name<input id="remote-hostname" placeholder="my-library.duckdns.org" autocomplete="off" spellcheck="false"></label>
+          <label class="inline"><input id="remote-expose" type="checkbox"> Make this Jellyfin sign-in page reachable from the internet using HTTPS. Viewers still need a Jellyfin account. Allow Caddy's certificate provider to issue and renew a certificate for this name.</label>
+          <button class="primary" data-remote="direct-configure">Set up my HTTPS address</button>
+        </fieldset>
+        <div id="remote-router-step" hidden>
+          <h4>3. Connect your router</h4><p id="remote-forwarding"></p>
+          <p>In your router, find <strong>Port forwarding</strong> (sometimes under Advanced or NAT). Add two TCP entries: outside 80 → this computer, inside 80; outside 443 → this computer, inside 443. Do not forward 8096. Reserve this computer's local address under DHCP / Address reservation.</p>
+          <p>If your router is managed through an ISP app, make those entries there. We never need your router password. If your ISP blocks incoming connections or uses a shared address, choose the private connection above.</p>
+          <button data-remote="direct-check">I added the entries — check HTTPS</button>
+        </div>
+        <details><summary>Remove this managed HTTPS connection</summary><p>This stops the service, address updates and the Windows firewall rule created here. You will also need to remove the two router entries.</p><button data-remote="direct-remove">Remove my managed HTTPS connection</button></details>
+      </div>
+      <div id="remote-private" hidden><p>This uses Tailscale, a separate connection app with its own account and plan limits. Install it on each viewing device. This is useful when your ISP or router cannot accept incoming connections.</p>
+      <button class="primary" data-remote="advance" id="remote-start">Set up watching away from home</button></div>
       <p id="remote-out" role="status" aria-live="polite">You can skip this and set it up later.</p>
       <a id="remote-approve" class="button" hidden target="_blank" rel="noopener noreferrer">Approve your connection</a>
       <div id="remote-phone" hidden>
         <h4>Let's connect your phone</h4>
-        <p>1. <a href="https://tailscale.com/download" target="_blank" rel="noopener noreferrer">Install Tailscale on your phone</a> and sign in with the same account you just approved. Allow its connection request.</p>
-        <p>2. Turn your phone's Wi-Fi off, keeping mobile data and Tailscale on. Scan this code with your camera, then sign into Jellyfin.</p>
+        <p id="remote-private-phone" hidden>First <a href="https://tailscale.com/download" target="_blank" rel="noopener noreferrer">install Tailscale on your phone</a> and sign in with the same account. Keep it connected for this test.</p>
+        <p>Turn your phone's Wi-Fi off, keeping mobile data on. Scan this code with your camera, then sign into Jellyfin. For a direct HTTPS connection, also turn off any VPN so this tests public access.</p>
         <img id="remote-qr" alt="Scan to open your Jellyfin server" width="220" height="220">
         <label>Your server address<input id="remote-result" readonly aria-label="Remote server address"></label>
         <button id="remote-copy">Copy address for Jellyfin or Orbital</button>

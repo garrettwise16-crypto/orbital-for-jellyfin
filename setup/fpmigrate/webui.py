@@ -356,6 +356,22 @@ class App:
         if not jf.call('GET', '/Users/Me').get('Policy', {}).get('IsAdministrator'):
             raise ValueError('Sign in as a Jellyfin administrator to configure remote access.')
         action = (body or {}).get('action', 'status')
+        if action.startswith('direct-'):
+            from . import direct_https
+            method=action.removeprefix('direct-')
+            if method not in ('assess','configure','check','confirm','remove','resume'):
+                raise ValueError('Unknown HTTPS setup step.')
+            token=jf.token
+            def direct_progress(message):
+                if self.engine.jf is not jf or jf.token!=token:raise Cancelled()
+                self.engine._p('remote-access',message=message)
+            def direct_work():
+                direct_progress('Preparing your HTTPS connection…')
+                if method=='assess':return direct_https.assess(jf,body or {},direct_progress)
+                return getattr(direct_https,method)(jf,self.engine.data_dir,body or {},direct_progress)
+            if not self.job.start('remote-access',direct_work):
+                raise ValueError('Another setup step is running. Wait for it to finish.')
+            return {'started':True}
         if action == 'status':
             return remote_access.status(jf)
         if action == 'verify':

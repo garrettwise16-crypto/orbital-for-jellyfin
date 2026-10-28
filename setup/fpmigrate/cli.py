@@ -46,7 +46,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="fpmigrate")
     ap.add_argument("command", choices=["detect", "plan", "migrate", "rollback", "report", "undo-setup", "ui",
                                         "orbital-status", "orbital-install", "orbital-remove",
-                                        "install-app", "uninstall-app", "update-check"])
+                                        "install-app", "uninstall-app", "update-check", "direct-https-helper"])
+    ap.add_argument("--request", default=None, help=argparse.SUPPRESS)
     ap.add_argument("--webdir", default=None, help="Jellyfin web folder (orbital-* commands)")
     ap.add_argument("--result", default=None, help="write the orbital-* result as JSON to this file")
     ap.add_argument("--orbital", action="store_true", help="migrate: also apply the Orbital look")
@@ -65,6 +66,15 @@ def main(argv=None) -> int:
     ap.add_argument("--no-browser", action="store_true")
     ap.add_argument("--port", type=int, default=0, help="ui: fixed local port (default: random)")
     args = ap.parse_args(argv)
+
+    if args.command == 'direct-https-helper':
+        from .direct_https import admin_helper
+        try:
+            out=admin_helper(json.loads(Path(args.request).read_text(encoding='utf-8')));code=0
+        except Exception as error:
+            out={'error':str(error)};code=1
+        Path(args.result).write_text(json.dumps(out),encoding='utf-8')
+        return code
 
     if args.command.startswith("orbital-"):
         return _orbital_command(args)

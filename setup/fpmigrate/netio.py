@@ -10,6 +10,8 @@ import urllib.parse
 import urllib.request
 
 _SECRET_PATTERNS = [
+    (re.compile(r'([?&]token=)[^&\s"\']+', re.I), r'\1[REDACTED]'),
+    (re.compile(r'("dns_token"\s*:\s*")[^"]*(")', re.I), r'\1[REDACTED]\2'),
     (re.compile(r"([?&](?:username|password)=)[^&\s\"']+", re.I), r"\1[REDACTED]"),
     (re.compile(r"(X-Plex-Token=)[^&\s\"']+", re.I), r"\1[REDACTED]"),
     (re.compile(r"(api_key=|ApiKey=|access_token=)[^&\s\"']+", re.I), r"\1[REDACTED]"),

@@ -68,7 +68,9 @@ def allowed(rule, path, text):
                         'setup/notices/zlib-LICENSE.txt': {'jloup@gzip.org', 'madler@alumni.caltech.edu'}}
     if rule == 'email address' and text in license_contacts.get(path.as_posix(), set()): return True
     # Reviewed Windows standard environment/directory names; no owner paths.
-    if rule == 'local path' and path.as_posix() in {'setup/fpmigrate/appinstall.py','setup/fpmigrate/cli.py','setup/fpmigrate/orbital.py'} and text == 'APPDATA': return True
+    if rule == 'local path' and path.as_posix() in {'setup/fpmigrate/appinstall.py','setup/fpmigrate/cli.py','setup/fpmigrate/orbital.py','setup/fpmigrate/direct_https.py'} and text == 'APPDATA': return True
+    # Reject the generic local-only DNS suffix when setting up a public address.
+    if rule == 'private hostname' and path.as_posix() == 'setup/fpmigrate/direct_https.py' and text == '.local': return True
     if rule == 'private hostname' and path.as_posix() == 'setup/fpmigrate/cli.py' and text == '.local': return True
     # Code expression, not a credential value.
     if rule == 'credential' and path.as_posix() == 'setup/fpmigrate/engine.py' and text == 'password = generate_password': return True

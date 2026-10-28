@@ -817,18 +817,50 @@ $("btn-connect-catalogue").addEventListener("click", ev => busy(ev.target, async
 }));
 
 // Account approvals remain with the user; no network change happens on page load.
+let remoteConfirmationMode='direct';
+function remoteMethod(){
+ const direct=$('remote-method').value==='direct';
+ $('remote-direct').hidden=!direct;$('remote-private').hidden=direct;
+ $('remote-private-phone').hidden=direct;$('remote-phone').hidden=true;$('remote-approve').hidden=true;
+ $('remote-out').textContent=direct?'Start with the network check, then choose your address.':'This fallback needs Tailscale on each viewing device. If you already installed direct HTTPS, remove it using the direct connection panel if you no longer want it public.';
+}
+$('remote-method').addEventListener('change',remoteMethod);
+$('remote-dns-mode').addEventListener('change',()=>{$('remote-duckdns').hidden=$('remote-dns-mode').value!=='duckdns';});
+function showRemoteResult(result){
+ $('remote-out').textContent=result.message;
+ if(result.public_ip||result.lan_ip){
+  $('remote-network').hidden=false;
+  $('remote-network-details').textContent=`This computer: ${result.lan_ip||'not detected'}. Internet address: ${result.public_ip||'not detected'}.`;
+  $('remote-forwarding').textContent=`Send both entries to ${result.lan_ip||'this computer’s local address'}. Your domain should point to ${result.public_ip||'your public internet address'}.`;
+ }
+ if(['network','router','phone','complete'].includes(result.phase))$('remote-address-step').hidden=false;
+ if(result.router_url){$('remote-router').href=result.router_url;$('remote-router').hidden=false;}
+ if(result.direct_possible===false)$('remote-out').textContent+=' Select Private connection with Tailscale above to continue without forwarding ports.';
+ if(result.host){$('remote-hostname').value=result.host;$('remote-dns-mode').value=result.dns_mode;$('remote-duckdns').hidden=result.dns_mode!=='duckdns';}
+ if(result.phase==='router')$('remote-router-step').hidden=false;
+ if(result.approval_url){$('remote-approve').href=result.approval_url;$('remote-approve').hidden=false;$('remote-start').textContent='Continue after approval';}
+ if(result.url && (['phone','complete'].includes(result.phase)||result.verified_here||result.show_phone)){
+  $('remote-result').value=result.url;$('remote-phone').hidden=false;$('remote-qr').hidden=!result.qr;
+  if(result.qr)$('remote-qr').src=result.qr;$('remote-start').textContent='Check connection again';
+ }
+}
 for (const button of document.querySelectorAll('[data-remote]')) button.addEventListener('click', async () => {
-  const controls=[...document.querySelectorAll('[data-remote]')]; controls.forEach(b=>b.disabled=true);
+  const controls=[...document.querySelectorAll('[data-remote],#remote-method,#remote-dns-mode,#remote-dns-token,#remote-hostname,#remote-wan,#remote-expose')]; controls.forEach(b=>b.disabled=true);
   $('remote-out').textContent='Preparing your connection…'; $('remote-approve').hidden=true; $('remote-phone').hidden=true;
   try {
-    let result=await api('POST','/api/remote-access',{action:button.dataset.remote,url:$('remote-url').value.trim()});
+    let result=await api('POST','/api/remote-access',{action:button.dataset.remote,url:$('remote-url').value.trim(),hostname:$('remote-hostname').value.trim(),dns_mode:$('remote-dns-mode').value,dns_token:$('remote-dns-token').value.trim(),expose:$('remote-expose').checked,router_wan:$('remote-wan').value.trim()});
     if(result.started) result=await waitJob(p=>{$('remote-out').textContent=p.message||'Setting up your connection…';});
-    $('remote-out').textContent=result.message;
-    if(result.approval_url){$('remote-approve').href=result.approval_url;$('remote-approve').hidden=false;$('remote-start').textContent='Continue after approval';}
-    if(result.url){$('remote-result').value=result.url;$('remote-phone').hidden=false;$('remote-qr').hidden=!result.qr;if(result.qr)$('remote-qr').src=result.qr;$('remote-start').textContent='Check connection again';}
+    showRemoteResult(result);
+    remoteConfirmationMode=button.dataset.remote.startsWith('direct-')?'direct':button.dataset.remote==='verify'?'existing':'private';
+    $('remote-private-phone').hidden=remoteConfirmationMode!=='private';
+    if(button.dataset.remote==='direct-configure')$('remote-dns-token').value='';
   } catch(e) { $('remote-out').textContent=e.message;$('remote-start').textContent='Try again'; }
   finally { controls.forEach(b=>b.disabled=false); }
 });
 $('remote-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('remote-result').value);$('remote-out').textContent='Address copied. Paste it into the server field in Jellyfin or Orbital.';}catch{$('remote-result').select();$('remote-out').textContent='Select and copy the address above.';}});
-$('remote-confirm').addEventListener('click',()=>{$('remote-out').textContent='You confirmed playback works away from home. Keep the server computer on and Tailscale connected on your viewing device.';});
-$('remote-help').addEventListener('click',()=>{$('remote-out').textContent='Check that the server computer is on, Tailscale says Connected on both devices, and both use the same Tailscale account. Keep mobile data on. Try the address again; if it opens but playback fails, check the Jellyfin account has remote playback permission. You can return here without repeating installation.';});
+$('remote-confirm').addEventListener('click',async()=>{
+ if(remoteConfirmationMode!=='direct'){$('remote-out').textContent='You confirmed playback works away from home. Keep the server computer on.'+(remoteConfirmationMode==='private'?' Keep Tailscale connected on your viewing device.':'');return;}
+ $('remote-confirm').disabled=true;
+ try{let r=await api('POST','/api/remote-access',{action:'direct-confirm',away_played:true,url:$('remote-result').value});if(r.started)r=await waitJob(p=>{$('remote-out').textContent=p.message;});showRemoteResult(r);}catch(e){$('remote-out').textContent=e.message;}finally{$('remote-confirm').disabled=false;}
+});
+$('remote-help').addEventListener('click',()=>{$('remote-out').textContent=$('remote-method').value==='direct'?'Keep the server on. Check both TCP forwarding entries and your domain address. Try with Wi-Fi and VPN off. If sign-in works but playback does not, check that Jellyfin allows remote access for this user. A valid test from this computer does not prove outside access.':'Check that Tailscale says Connected on both devices and both use the same account. Keep mobile data on. If sign-in works but playback does not, check this Jellyfin user’s remote access permission.';});

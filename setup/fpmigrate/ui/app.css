@@ -157,5 +157,11 @@ dt { font-weight: 650; }
 #live-tv-out { padding: 12px 0; overflow-wrap: anywhere; }
 
 #remote-access-card label{display:grid;gap:8px}#remote-result{width:100%;box-sizing:border-box}#remote-qr{background:#fff;padding:12px;border-radius:12px;max-width:100%;height:auto}
+#remote-access-card fieldset{min-inline-size:0;border:1px solid var(--line);border-radius:12px;padding:16px;margin:20px 0}
+#remote-access-card input:not([type=checkbox]),#remote-access-card select{min-width:0;max-width:100%;width:100%;box-sizing:border-box}
+#remote-access-card label.inline{display:flex;align-items:flex-start;gap:12px}#remote-access-card label.inline input{flex:none;margin-top:5px}
+#remote-access-card button,#remote-access-card .button{white-space:normal;overflow-wrap:anywhere;max-width:100%}
+#remote-access-card p{overflow-wrap:anywhere}#remote-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;list-style-position:inside;padding:0}
+#remote-steps li{padding:10px;border-radius:8px;background:var(--soft);font-size:14px}
 
 .artwork-samples{display:flex;flex-wrap:wrap;gap:16px}.artwork-samples figure{margin:0;max-width:140px;text-align:center}.artwork-samples img{object-fit:contain}.artwork-samples figcaption{font-size:13px;margin-top:6px}
