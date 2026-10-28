@@ -123,7 +123,14 @@
       if (starting) throw new Error('A playback request is already in progress.');
       starting = true;
       try {
-        if (this._lifecycle && !this._lifecycle.detached) await this.stop(true);
+        if (this._lifecycle && !this._lifecycle.detached) {
+          // A new explicit Play may reconcile a previous settled retirement failure.
+          // The native protocol checks the same lease and any late acknowledgement;
+          // an in-flight retirement must still be awaited, never dispatched twice.
+          if (this._lifecycle.retirement && !this._lifecycle.retirementPending && typeof this.retryLocalRetirement === 'function') {
+            await this.retryLocalRetirement();
+          } else await this.stop(true);
+        }
         return await original.call(this, options);
       } finally { starting = false; }
     };
