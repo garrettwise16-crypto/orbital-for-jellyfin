@@ -1938,7 +1938,7 @@ function pitchCameraCore(){
   const art=t=>window.OrbitalArtwork.team(ev,t);
   // Records: the page's own team rows carry them even when the tracker model does not.
   const rows=[...dialog.querySelectorAll('.otv-game-header .otv-team-row')];for(const [k,t] of [[0,away],[1,home]])if(!t.record){const r=rows[k]?.querySelector('.otv-team-record')?.textContent?.trim();if(r)t.record=r;}
-  const fix=()=>{const top=dialog.querySelector('.otv-game-state');if(top&&state==='scheduled'&&!/Starts/.test(top.textContent)){top.textContent=ev.league+' · Starts '+(Number.isFinite(start)?new Date(start).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'soon');top.dataset.state='scheduled';}};fix();
+  const fix=()=>{const top=dialog.querySelector('.otv-game-state'),reported=String(d?.status||ev.status||''),label=/postpon|cancel|suspend|delay/i.test(reported)?reported:'Starts '+(Number.isFinite(start)?new Date(start).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'soon');if(top&&state==='scheduled'){const next=ev.league+' · '+label;if(top.textContent!==next)top.textContent=next;top.dataset.state='scheduled';}};fix();
   // The one-page view repaints the top line after this; keep it truthful.
   if(!dialog.__gc2top){dialog.__gc2top=new MutationObserver(()=>dialog.__gc2fix?.());const t=dialog.querySelector('.otv-game-state');if(t)dialog.__gc2top.observe(t,{childList:true,characterData:true,subtree:true});}dialog.__gc2fix=fix;
   const ca=art(away).color,chh=art(home).color;

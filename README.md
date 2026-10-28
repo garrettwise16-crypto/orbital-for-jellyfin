@@ -19,7 +19,7 @@ Common combinations:
 
 ## Guided setup
 
-[Download Orbital Setup for Windows](https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/tag/setup-v0.2.0-preview.7). Open `OrbitalSetup.exe` to start the workflow. It is an unsigned preview; release notes include its checksum and current validation limits.
+[Download Orbital Setup for Windows](https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/tag/setup-v0.2.0-preview.9). Open `OrbitalSetup.exe` to start the workflow. It is an unsigned preview; release notes include its checksum and current validation limits.
 
 **Orbital Setup is an interactive workflow**, for a new Jellyfin server or an existing one. It explains each action, runs selected installation steps, checks the result, and lets you retry a failed feature without starting over. Choose the web interface, Sports, or both; library setup and Plex migration are optional.
 
