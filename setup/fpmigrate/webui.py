@@ -99,6 +99,7 @@ class App:
         self.stop = threading.Event()
         self.request_lock = threading.RLock()
         self.setup_file = Path(data_dir) / "feature-setup.json"
+        self.deployment_mode = 'windows'
 
     def target_key(self):
         if not self.engine.jf:
@@ -139,8 +140,34 @@ class App:
                                  for r in e.journal.runs()[:5]]}
 
     def detect(self, _q, b):
+        from .onboarding import MODES
+        mode = b.get('deployment', self.deployment_mode)
+        if mode not in MODES:
+            raise ValueError('Choose a deployment type.')
+        if self.job.view()['running'] and mode != self.deployment_mode:
+            raise RuntimeError('Wait for the current step before changing deployment.')
+        self.deployment_mode = mode
         return self.engine.detect([b["plexUrl"]] if b.get("plexUrl") else None,
-                                  [b["jellyfinUrl"]] if b.get("jellyfinUrl") else None)
+                                  [b["jellyfinUrl"]] if b.get("jellyfinUrl") else None,
+                                  include_defaults=mode == 'windows')
+
+    def preflight(self, _q, _b):
+        from .onboarding import preflight
+        return preflight()
+
+    def deployment(self, _q, b):
+        from .onboarding import deployment
+        return deployment(b)
+
+    def findings(self, _q, b):
+        from .onboarding import findings
+        return findings(self, b)
+
+    def migration_check(self, _q, b):
+        run_id = b.get('runId') or self.last_run
+        if not run_id or not self.engine.jf:
+            raise ValueError('Complete a migration and connect its Jellyfin server first.')
+        return {'started': self.job.start('verify', lambda: {'verify': self.engine.verify(run_id)})}
 
     def plex_connect(self, _q, b):
         try:
@@ -168,6 +195,8 @@ class App:
 
     def server_install(self, _q, b):
         from . import serverinstall
+        if self.deployment_mode != 'windows':
+            raise ValueError('Windows installation is only available for This Windows PC.')
         if b.get("agreed") is not True:
             raise ValueError("Accept the installation agreements first.")
         if self.engine.jf:
@@ -519,6 +548,8 @@ class App:
         return {"ok": True}
 
     ROUTES = {
+        ("GET", "/api/preflight"): "preflight", ("POST", "/api/deployment"): "deployment",
+        ("POST", "/api/findings"): "findings", ("POST", "/api/migration/check"): "migration_check",
         ("GET", "/api/status"): "status", ("POST", "/api/detect"): "detect",
         ("POST", "/api/plex/connect"): "plex_connect", ("POST", "/api/plex/signin/start"): "plex_signin_start",
         ("POST", "/api/plex/signin/poll"): "plex_signin_poll", ("POST", "/api/plex/profiles"): "plex_profiles",

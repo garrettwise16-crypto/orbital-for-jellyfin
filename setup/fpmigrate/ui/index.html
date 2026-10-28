@@ -23,13 +23,30 @@
 
   <!-- 1. Start ---------------------------------------------------------------------------------- -->
   <section data-panel="start">
-    <p class="sub">Private preview · Windows installation still needs clean-machine verification. Use a test setup.</p>
+    <p class="sub">Public preview · Windows installation still needs clean-machine verification. Keep your existing server available while testing.</p>
     <h1>Make Jellyfin yours</h1>
     <fieldset class="card"><legend>Where are you starting?</legend>
       <label class="inline"><input type="radio" name="journey" value="fresh" checked> I'm starting fresh</label>
       <label class="inline"><input type="radio" name="journey" value="existing"> I already use Jellyfin</label>
       <label class="inline"><input type="radio" name="journey" value="migration"> I'm moving from Plex</label>
     </fieldset>
+    <div class="card">
+      <h2>Where should Jellyfin live?</h2>
+      <label for="deployment-mode">Choose a home for your server</label>
+      <select id="deployment-mode"><option value="windows">This Windows PC — recommended, easiest setup</option><option value="existing">An existing Jellyfin server</option><option value="docker">A Linux server using Docker — advanced</option><option value="linux">A Debian / Ubuntu server — advanced</option></select>
+      <p id="preflight-out" role="status">Checking this computer…</p>
+      <div id="deployment-advanced" hidden>
+        <p>We prepare the deployment files. You run them on your chosen server, then return here to connect. This Windows app does not remotely install server files or change that machine without you.</p>
+        <div id="docker-options" hidden>
+          <label for="deploy-media">Media folder on the Linux host</label><input id="deploy-media" placeholder="/media/media">
+          <label for="deploy-version">Jellyfin image version</label><input id="deploy-version" value="12.2">
+          <label for="deploy-port">Server port</label><input id="deploy-port" type="number" min="1024" max="65535" value="8096">
+          <label for="deploy-uid">Linux user ID (run id -u there)</label><input id="deploy-uid" value="1000">
+          <label for="deploy-gid">Linux group ID (run id -g there)</label><input id="deploy-gid" value="1000">
+        </div>
+        <button id="prepare-deployment">Prepare my deployment</button><p id="deployment-out" role="status"></p><pre id="deployment-command"></pre><div id="deployment-files"></div>
+      </div>
+    </div>
     <p class="lead">Choose what you want. We'll check your computer, carry out the setup, and explain each step as it happens.</p>
     <div class="status-list" aria-live="polite">
       <div class="status" id="st-plex"><span class="icon wait" aria-hidden="true"></span><div><strong>Plex</strong><span class="sub">Looking on this PC...</span></div></div>
@@ -51,10 +68,10 @@
       <li>Shows you everything before copying, and can undo it</li>
       <li>Your media stays where it is; connected services receive only the requests needed for their features</li>
     </ul>
-    <details class="adv"><summary>Plex or Jellyfin runs on a different computer</summary>
+    <details class="adv" id="server-addresses"><summary>Server addresses and advanced connection</summary>
       <label for="plex-url">Plex address</label><input id="plex-url" placeholder="http://jellyfin.example.com:32400" autocomplete="off">
       <label for="jf-url">Jellyfin address</label><input id="jf-url" placeholder="http://jellyfin.example.com:8096" autocomplete="off">
-      <button id="btn-recheck">Look again</button>
+      <button id="btn-recheck">Check server</button>
     </details>
     <p class="fine">Not affiliated with Plex Inc. or the Jellyfin project.</p>
   </section>
@@ -339,6 +356,7 @@
       <p class="sub">Coming later as Orbital Plus: a tracker that locks to your picture automatically, plays read straight from the score display on your screen (pitch by pitch, with the pitch type and speed when the network shows them), and channels checked against the actual picture with automatic switching. The first 25 founding households get Plus free. Nothing here asks for a card.</p>
     </details>
     <details class="card"><summary>Report, undo and privacy</summary>
+      <button id="btn-check-migration">Check copied progress again</button><p id="migration-check-out" role="status"></p>
       <div class="row">
         <button id="btn-report">Save a report</button>
         <button id="btn-rollback">Undo the copied progress</button>
@@ -358,6 +376,16 @@
     <div class="actions"><button class="ghost" id="btn-quit">Close this app</button></div>
   </section>
 </main>
+<details class="card" id="findings-card"><summary>Report a problem / tester checklist</summary>
+  <p>Available even if setup fails. Mark only what you actually tried. Results are your observations, not automatic playback proof.</p>
+  <div id="tester-checks"></div>
+  <label for="findings-description">What were you doing, what did you expect, and what happened? Include your device/app and approximate time.</label>
+  <textarea id="findings-description" rows="4" maxlength="6000" placeholder="Do not include passwords, account tokens or private links."></textarea>
+  <button id="prepare-findings">Prepare private report</button>
+  <p id="findings-out" role="status"></p><pre id="findings-preview" hidden></pre>
+  <button id="download-findings" hidden>Save reviewed report</button>
+  <p class="sub">Nothing is uploaded. Review the preview, save the file, and send it privately with screenshots if useful. The separate migration CSV includes usernames and titles.</p>
+</details>
 <script src="/app.js"></script>
 </body>
 </html>

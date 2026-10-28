@@ -4,7 +4,15 @@ An interactive setup application for new and existing Jellyfin servers. Choose i
 
 The Windows preview supports installing Jellyfin through Windows Package Manager, creating the first administrator account, selecting media folders, and installing selected features. It also supports optional migration from Plex. It does not supply media, subscriptions, provider credentials, or team artwork rights.
 
-## Build the Windows app
+## Simple and advanced setup
+
+Choose **This Windows PC** for the automated native installer, or **An existing Jellyfin server** to connect without installing another server. The startup check shows free space on the setup profile drive; media and transcode drives can differ. Plex migration proposes libraries and user matches, checks folder access through Jellyfin, previews the changes and verifies copied progress. **Check copied progress again** repeats the readback; actual playback is a separate test.
+
+Advanced users can choose **Docker on Linux** to generate a version-pinned Compose deployment with persistent config/cache and read-only media, or **Debian / Ubuntu** to generate a script that downloads and verifies Jellyfin's official installer before asking for permission to run it. Save and execute these files on the chosen host, then enter its address and choose **Check server**. These paths do not silently install on the Windows PC or fall back to a different server. This Windows application does not automatically install Orbital web/plugin files on remote hosts; compatibility and host-specific GPU configuration remain separate checks. Docker on Windows is not the recommended path.
+
+**Report a problem / tester checklist** is available before setup succeeds. Record movie, resume, episode, subtitle/audio and outside-home checks as Worked, Had a problem or Not tested. Prepare the report, review its preview and save the JSON file for private sharing. It includes the executable fingerprint, platform, server versions, aggregate migration results and your description; it does not automatically collect raw logs, library titles, account names or server addresses. Known credentials and recognizable links are redacted, but review free-text descriptions yourself. Nothing is uploaded. The separate migration CSV contains title/account details.
+
+### Build the Windows app
 
 Use Python 3.12, the .NET 10 SDK, and the reference assemblies from your supported Jellyfin 12 server installation. The setup executable contains the web layer and Sports plugin; it downloads Jellyfin separately only when requested.
 

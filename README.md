@@ -19,7 +19,7 @@ Common combinations:
 
 ## Guided setup
 
-[Download Orbital Setup for Windows](https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/tag/setup-v0.2.0-preview.14). Open `OrbitalSetup.exe` to start the workflow. It is an unsigned preview; release notes include its checksum and current validation limits.
+[Download Orbital Setup for Windows](https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/tag/setup-v0.2.0-preview.15). Open `OrbitalSetup.exe` to start the workflow. It is an unsigned preview; release notes include its checksum and current validation limits.
 
 **Orbital Setup is an interactive workflow**, for a new Jellyfin server or an existing one. It explains each action, runs selected installation steps, checks the result, and lets you retry a failed feature without starting over. Choose the web interface, Sports, or both; library setup and Plex migration are optional.
 
@@ -29,7 +29,9 @@ On the final screen, choose **Save and check sources** before **Open Jellyfin**.
 
 You can also connect Seerr for requests and service catalogues. Save and check its connection, select one catalogue or all supported services, then watch setup download, validate and save the listings. No JSON export is required. Listings currently cover the US. Daily updates are enabled by default while Jellyfin runs; choose manual updates in setup if preferred. Failed or interrupted updates keep your saved listings. They add discovery metadata, not subscriptions or video.
 
-**Watch away from home** is optional. One workflow installs the private connection app, asks you to approve your own account, configures private HTTPS, and gives you a QR code and a guided phone check. It keeps existing proxy routes and does not open a public router port. The connection provider's approvals and the final phone test require you; local verification is never reported as outside-home proof.
+**Watch away from home** is optional. The recommended path configures a normal HTTPS address, automatic certificates and startup, with optional DuckDNS updates. Setup explains the two router entries, verifies the server identity and gives you a guided mobile-data check. Private Tailscale access remains available when incoming connections are blocked. Account approvals, router edits and real playback confirmation require you; local verification is never reported as outside-home proof.
+
+**Choose your deployment:** native Windows is the recommended automated path. Existing servers can connect directly; advanced Linux/Docker choices generate deployment files to run on that host and then check here. Remote feature file installation is not automated. A reviewable tester report is available even when setup fails; it is saved locally and never uploaded automatically.
 
 Use **stock Jellyfin or Orbital** on Android. Both connect to the same server and library; the optional Orbital app adds its native episode drawer, channel browser and tracker controls. The server web interface is optional too.
 

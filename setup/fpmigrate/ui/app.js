@@ -55,7 +55,7 @@ async function waitJob(onProgress) {
 
 // ---- 1. Start: automatic detection ---------------------------------------------------------------
 async function detect() {
-  const d = await api("POST", "/api/detect", { plexUrl: $("plex-url").value.trim() || null, jellyfinUrl: $("jf-url").value.trim() || null });
+  const d = await api("POST", "/api/detect", { plexUrl: $("plex-url").value.trim() || null, jellyfinUrl: $("jf-url").value.trim() || null, deployment: $("deployment-mode").value });
   const plex = d.plex.find((p) => p.found), jf = d.jellyfin.find((j) => j.found);
   S.plexUrl = plex && plex.url; S.jfUrl = jf && jf.url; S.jfFresh = !!jf && !jf.wizardCompleted;
   if (plex) setStatus("st-plex", "ok", "Plex found", `Version ${plex.version || "unknown"}${plex.needsSignIn ? ". You'll sign in on the next screen." : ""}`);
@@ -65,14 +65,14 @@ async function detect() {
   if (jf) setStatus("st-jf", "ok", "Jellyfin found", S.jfFresh ? "Installed but not set up yet. We'll set it up for you." : `Version ${jf.version}`);
   else if (starting) setStatus("st-jf", "wait", "Jellyfin is starting up", "This takes a moment. This page continues by itself.");
   else if (typedJf) setStatus("st-jf", "warn", "Jellyfin didn't answer", `Nothing answered at ${typedJf}. Check the address, or that Jellyfin is running.`);
-  else setStatus("st-jf", "todo", "Jellyfin isn't installed yet", "It's free. Install it below, then this page continues by itself.");
-  $("jf-install").hidden = !!jf || starting || !!typedJf || journey() === "existing";
+  else setStatus("st-jf", "todo", "Jellyfin is not connected", $("deployment-mode").value === "windows" ? "Install it below, then this page checks it automatically." : "Enter your chosen server address below, then choose Check server.");
+  $("jf-install").hidden = !!jf || starting || !!typedJf || journey() === "existing" || $("deployment-mode").value !== "windows";
   $("st-plex").hidden = journey() !== "migration";
   const ready = !!jf && !S.installingServer && (journey() !== "migration" || !!plex); const btn = $("btn-start");
   btn.disabled = !ready; btn.textContent = ready ? "Get started" : plex ? "Waiting for Jellyfin..." : "Get started";
   clearTimeout(S.pollTimer);
   if (!jf) S.pollTimer = setTimeout(() => detect().catch(() => {}), starting ? 2000 : 5000);
-  if (!plex && journey() === "migration") document.querySelector("details.adv").open = true;
+  if ((!plex && journey() === "migration") || $("deployment-mode").value !== "windows") $("server-addresses").open = true;
   if (ready) say("Ready. Press Get started.");
 }
 $("btn-recheck").addEventListener("click", (ev) => busy(ev.target, detect));
@@ -327,6 +327,7 @@ $("btn-pause").addEventListener("click", () => api("POST", "/api/cancel"));
 // ---- 4. Done -----------------------------------------------------------------------------------------
 function showDone(res) {
   go("done");
+  if(res.verify) showMigrationCheck(res.verify);
   const made = [res.playlistsCreated ? n(res.playlistsCreated, "playlist", "playlists") : null,
                 res.collectionsCreated ? n(res.collectionsCreated, "collection", "collections") : null].filter(Boolean);
   $("done-summary").textContent = `${n(res.verified || 0, "title", "titles")} copied and double-checked` +
@@ -580,6 +581,7 @@ $("btn-quit").addEventListener("click", async () => { await api("POST", "/api/qu
 function setServerInstalling(active) {
   S.installingServer = active;
   document.querySelectorAll('input[name="journey"]').forEach(input => { input.disabled = active; });
+  $("deployment-mode").disabled = active;
   if (active) $("btn-start").disabled = true;
 }
 function journey() { return document.querySelector('input[name="journey"]:checked').value; }
@@ -864,3 +866,44 @@ $('remote-confirm').addEventListener('click',async()=>{
  try{let r=await api('POST','/api/remote-access',{action:'direct-confirm',away_played:true,url:$('remote-result').value});if(r.started)r=await waitJob(p=>{$('remote-out').textContent=p.message;});showRemoteResult(r);}catch(e){$('remote-out').textContent=e.message;}finally{$('remote-confirm').disabled=false;}
 });
 $('remote-help').addEventListener('click',()=>{$('remote-out').textContent=$('remote-method').value==='direct'?'Keep the server on. Check both TCP forwarding entries and your domain address. Try with Wi-Fi and VPN off. If sign-in works but playback does not, check that Jellyfin allows remote access for this user. A valid test from this computer does not prove outside access.':'Check that Tailscale says Connected on both devices and both use the same account. Keep mobile data on. If sign-in works but playback does not, check this Jellyfin user’s remote access permission.';});
+
+// Recommended path stays small; advanced deployment never installs on this PC.
+function downloadText(name,content){
+ const url=URL.createObjectURL(new Blob([content],{type:'text/plain;charset=utf-8'}));
+ const link=el('a',{href:url,download:name});document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+$('deployment-mode').addEventListener('change',()=>{
+ const mode=$('deployment-mode').value;
+ $('deployment-advanced').hidden=!['docker','linux'].includes(mode);$('docker-options').hidden=mode!=='docker';
+ $('deployment-files').replaceChildren();$('deployment-out').textContent='';$('deployment-command').textContent='';
+ S.jfUrl=null;$('btn-start').disabled=true;clearTimeout(S.pollTimer);
+ if(mode!=='windows')$('server-addresses').open=true;
+ detect().catch(e=>showError(e.message));
+});
+$('prepare-deployment').addEventListener('click',ev=>busy(ev.target,async()=>{
+ const r=await api('POST','/api/deployment',{mode:$('deployment-mode').value,media:$('deploy-media').value,version:$('deploy-version').value,port:$('deploy-port').value,uid:$('deploy-uid').value,gid:$('deploy-gid').value});
+ $('deployment-out').textContent=r.message+' '+(r.limitations||'');$('deployment-command').textContent=r.command||'';
+ $('deployment-files').replaceChildren(...r.files.map(f=>el('button',{text:'Save '+f.name,onclick:()=>downloadText(f.name,f.content)})));
+}));
+api('GET','/api/preflight').then(r=>{$('preflight-out').textContent=r.checks.join(' ')+(r.warning?' '+r.warning:'');}).catch(()=>{$('preflight-out').textContent='Computer check unavailable. Check free space before installing.';});
+function showMigrationCheck(v){
+ const pending=Object.entries(v).filter(([k,n])=>k.startsWith('not_')&&n).reduce((n,[k,x])=>n+x,0);
+ $('migration-check-out').textContent=`${v.holds||0} copied title records still match. ${v.changedSince||0} changed since copying. ${pending} were not verified. This checks copied progress; try playback separately below.`;
+}
+$('btn-check-migration').addEventListener('click',ev=>busy(ev.target,async()=>{
+ await api('POST','/api/migration/check',{runId:S.runId});const r=await waitJob(p=>{$('migration-check-out').textContent=p.message||'Checking copied progress…';});showMigrationCheck(r.verify);
+}));
+for(const [key,label] of Object.entries({movie:'Play a movie',resume:'Resume where you left off',episodes:'Switch TV episodes',subtitles:'Check subtitles and audio',remote:'Play away from home with Wi-Fi off'})){
+ const select=el('select',{id:'test-'+key},...Object.entries({not_tested:'Not tested',passed:'Worked',failed:'Had a problem'}).map(([value,text])=>el('option',{value,text})));
+ $('tester-checks').append(el('label',{for:'test-'+key,text:label}),select);
+}
+let findingsText='';
+function invalidateFindings(){findingsText='';$('download-findings').hidden=true;$('findings-preview').hidden=true;}
+$('findings-description').addEventListener('input',invalidateFindings);$('tester-checks').addEventListener('change',invalidateFindings);
+$('prepare-findings').addEventListener('click',ev=>busy(ev.target,async()=>{
+ const checks=Object.fromEntries(['movie','resume','episodes','subtitles','remote'].map(k=>[k,$('test-'+k).value]));
+ const r=await api('POST','/api/findings',{description:$('findings-description').value,checks});findingsText=JSON.stringify(r,null,2);
+ $('findings-preview').textContent=findingsText;$('findings-preview').hidden=false;$('download-findings').hidden=false;
+ $('findings-out').textContent='Review this report for personal details. Save it only when you are comfortable sharing it. Nothing has been uploaded.';
+}));
+$('download-findings').addEventListener('click',()=>{if(findingsText)downloadText('orbital-findings.json',findingsText);});

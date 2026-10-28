@@ -165,3 +165,6 @@ dt { font-weight: 650; }
 #remote-steps li{padding:10px;border-radius:8px;background:var(--soft);font-size:14px}
 
 .artwork-samples{display:flex;flex-wrap:wrap;gap:16px}.artwork-samples figure{margin:0;max-width:140px;text-align:center}.artwork-samples img{object-fit:contain}.artwork-samples figcaption{font-size:13px;margin-top:6px}
+
+#findings-card{max-width:900px;margin:24px auto;padding:24px} #findings-card pre,#deployment-command{white-space:pre-wrap;overflow-wrap:anywhere} #findings-card textarea{width:100%;box-sizing:border-box} #deployment-files{display:flex;gap:12px;flex-wrap:wrap}
+#deployment-mode,#docker-options input,#tester-checks select{min-width:0;max-width:100%;width:100%} #findings-card{width:calc(100% - 32px)} #findings-description{font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px}
