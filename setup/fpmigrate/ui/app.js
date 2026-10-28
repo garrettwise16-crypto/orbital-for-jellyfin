@@ -327,6 +327,7 @@ $("btn-pause").addEventListener("click", () => api("POST", "/api/cancel"));
 // ---- 4. Done -----------------------------------------------------------------------------------------
 function showDone(res) {
   go("done");
+  $("btn-check-migration").hidden = !S.runId;
   if(res.verify) showMigrationCheck(res.verify);
   const made = [res.playlistsCreated ? n(res.playlistsCreated, "playlist", "playlists") : null,
                 res.collectionsCreated ? n(res.collectionsCreated, "collection", "collections") : null].filter(Boolean);
@@ -648,11 +649,12 @@ $("add-library").addEventListener("click", ev => busy(ev.target, async () => {
   $("library-progress").textContent = r.message;
 }));
 function finishFeatures() {
-  go("done"); $("done-summary").textContent = "Jellyfin is connected. Your feature results are shown below. You can add more features later.";
+  go("done"); $("done-summary").textContent = "Jellyfin is connected. Review the feature results, then check server readiness and try playback. Connection alone does not mean everything is tested.";
+  $("btn-check-migration").hidden = !S.runId;
   $("open-jf").href = S.jfUrl + "/web/";
   document.querySelector('[data-panel="done"] h1').textContent = "Your setup results";
   const hasFailedFeature = Object.values(S.featureResults || {}).some(r => !r.ready);
-  document.querySelector('[data-panel="done"] .hero-ok .icon').className = "icon " + (hasFailedFeature ? "warn" : "ok") + " big";
+  document.querySelector('[data-panel="done"] .hero-ok .icon').className = "icon " + (hasFailedFeature ? "warn" : "todo") + " big";
   if (hasFailedFeature) $("done-summary").textContent = "Jellyfin is connected. Some optional features need attention; review the results below. You can still use Jellyfin.";
   $("btn-report").hidden = true; $("btn-rollback").hidden = true;
   $("done-feature-results").replaceChildren(...Array.from($("feature-progress").childNodes).map(n => n.cloneNode(true)));
@@ -907,3 +909,33 @@ $('prepare-findings').addEventListener('click',ev=>busy(ev.target,async()=>{
  $('findings-out').textContent='Review this report for personal details. Save it only when you are comfortable sharing it. Nothing has been uploaded.';
 }));
 $('download-findings').addEventListener('click',()=>{if(findingsText)downloadText('orbital-findings.json',findingsText);});
+
+let backupServerId=null;
+for(const button of document.querySelectorAll('[data-care]'))button.addEventListener('click',ev=>busy(ev.target,async()=>{
+ const action=button.dataset.care;
+ const controls=[...document.querySelectorAll('[data-care]')];controls.forEach(b=>b.disabled=true);
+ try{
+  const response=await api('POST','/api/server-care',{action,metadata:$('backup-metadata').checked,path:$('backup-choice').value,serverId:backupServerId,confirmation:$('restore-confirmation').value});
+  const r=response.started?await waitJob(p=>{$('care-out').textContent=p.message||'Checking…';}):response;
+  $('care-out').textContent=r.message||'Check finished.';
+  if(action==='inspect'){
+   const box=$('care-readiness');box.replaceChildren(el('h3',{text:'Configuration results'}));
+   const pathNames={ProgramDataPath:'Server settings and database',CachePath:'Temporary cache',TranscodingTempPath:'Temporary playback files'};
+   for(const item of r.storage)box.append(el('p',{text:`${pathNames[item.kind]||item.kind}: ${item.access==='writable_by_server'?'Jellyfin can write here':item.access==='needs_attention'?'Needs attention':'Not checked'}. ${item.freeGiB===null?'Free space not measured':item.freeGiB+' GiB free'+(item.freeGiB<10?' — low space':'')}.`}));
+   box.append(el('p',{text:`${r.libraries.length} library folder(s) checked; ${r.libraries.filter(x=>!x.readable).length} need access repaired.`}));
+   for(const item of r.libraries.filter(x=>!x.readable))box.append(el('p',{text:item.name+': '+item.path+'. '+item.help}));
+   box.append(el('p',{text:`Video conversion: ${['none','software'].includes(r.hardwareMode)?'using the processor (software)':r.hardwareMode}. HDR color conversion: ${r.toneMapping?'enabled, still needs playback testing':'not enabled'}.`}));
+   if(r.graphics.length)box.append(el('p',{text:'Detected graphics: '+r.graphics.map(x=>x.Name).join(', ')+'. Detection alone does not prove codec support.'}));
+   box.append(el('ul',{},...r.checksStillNeeded.map(text=>el('li',{text}))));
+  }
+  if(r.backups){backupServerId=r.serverId;$('backup-choice').replaceChildren(...r.backups.map(b=>el('option',{value:b.path,text:b.created+' · Jellyfin '+b.serverVersion})));$('restore-controls').hidden=!r.backups.length;if(!r.backups.length)$('care-out').textContent='No backups are listed yet. Create one above.';}
+  if(r.backup)$('care-out').textContent+=' Saved on the server: '+r.backup.path;
+  if(action==='updates')$('care-update').replaceChildren(el('a',{href:r.url,target:'_blank',rel:'noopener noreferrer',text:r.tag+' — release notes and download'}),el('p',{text:'Published asset checksum: '+(r.sha256||'See release checksum file')}));
+  if(action==='restore'){$('restore-confirmation').value='';$('restore-controls').hidden=true;}
+ }finally{controls.forEach(b=>b.disabled=false);}
+}));
+
+$('change-server').addEventListener('click',ev=>busy(ev.target,async()=>{
+ if(!confirm('Return to setup choices? Installed features and saved migration history stay in place. Unsaved form edits will be discarded.'))return;
+ await api('POST','/api/disconnect',{});location.reload();
+}));

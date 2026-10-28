@@ -12,7 +12,7 @@ import time
 import uuid
 from urllib.parse import urlparse
 from collections import defaultdict
-from pathlib import Path, PurePath
+from pathlib import Path, PurePath, PureWindowsPath
 
 from . import journal as J
 from .jellyfin import COLLECTION_TYPES, Jellyfin
@@ -450,7 +450,13 @@ class Engine:
             system = self.jf.call("GET", "/System/Info")
         except HttpError:
             system = {}
-        if not external and "windows" not in str(system.get("OperatingSystem") or system.get("OperatingSystemDisplayName") or "").lower():
+        reported_os = str(system.get("OperatingSystem") or system.get("OperatingSystemDisplayName") or "").lower()
+        # Jellyfin 12.4 omits the legacy OS fields. Require an existing absolute
+        # Windows data path on this Windows host; a loopback Linux container is insufficient.
+        data_path = system.get("ProgramDataPath") or ""
+        native_windows = "windows" in reported_os or (not reported_os and os.name == "nt"
+            and PureWindowsPath(data_path).is_absolute() and Path(data_path).is_dir())
+        if not external and not native_windows:
             return {"available": False, "reason": "Sports runs next to Jellyfin on Windows; this Jellyfin runs on "
                                                   f"{system.get('OperatingSystemDisplayName') or 'another system'}."}
         try:
@@ -657,7 +663,16 @@ class Engine:
                 self.journal.mark_list(lst["rowid"], "failed", note=str(exc))
                 stats[kind + "sFailed"] += 1
 
+    def _check_run_server(self, run_id: str):
+        run=self.journal.run(run_id)
+        if not run or not self.jf:
+            raise ValueError('Choose a saved migration and connect its Jellyfin server first.')
+        current=self.jf.public_info().get('Id')
+        if not current or not run.get('jellyfinId') or current!=run['jellyfinId']:
+            raise ValueError('This migration belongs to a different Jellyfin server. Nothing was changed.')
+
     def apply(self, run_id: str) -> dict:
+        self._check_run_server(run_id)
         self.cancel_event.clear()
         self.journal.set_run(run_id, "applying")
         todo = [a for a in self.journal.actions(run_id, writes_only=True)
@@ -711,6 +726,7 @@ class Engine:
         return {"status": status, **stats}
 
     def verify(self, run_id: str) -> dict:
+        self._check_run_server(run_id)
         stats = defaultdict(int)
         for a in self.journal.actions(run_id, writes_only=True):
             if a["status"] != J.VERIFIED:
@@ -721,6 +737,7 @@ class Engine:
         return dict(stats)
 
     def rollback(self, run_id: str) -> dict:
+        self._check_run_server(run_id)
         stats = defaultdict(int)
         for a in reversed(self.journal.actions(run_id, writes_only=True)):
             if a["status"] not in (J.APPLIED, J.VERIFIED):
@@ -838,5 +855,5 @@ class Engine:
     def forget_local_data(self):
         """Delete the local journal and stored sign-ins (exported reports are the user's own files)."""
         self.journal.close()
-        for name in ("journal.sqlite", "journal.sqlite-wal", "journal.sqlite-shm", "vault.bin"):
+        for name in ("journal.sqlite", "journal.sqlite-wal", "journal.sqlite-shm", "vault.bin", "operation-timeline.json"):
             (self.data_dir / name).unlink(missing_ok=True)

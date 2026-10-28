@@ -376,6 +376,24 @@
     <div class="actions"><button class="ghost" id="btn-quit">Close this app</button></div>
   </section>
 </main>
+<div class="support-card"><button id="change-server">Start over / change server</button><p class="sub">Returns to setup choices. Keeps installed features, media and migration history. Wait for running operations to finish first.</p></div>
+<details class="card support-card" id="care-card"><summary>Check server readiness, backups and updates</summary>
+  <p>After connecting Jellyfin, these checks report what the server can verify; actual playback, HDR, reboot recovery and away-from-home access remain separate tests.</p>
+  <button data-care="inspect">Check storage and playback settings</button>
+  <div id="care-readiness"></div>
+  <h3>Protect your progress</h3>
+  <p>Create a Jellyfin database backup before a migration or update. It stays on the server and does not include your videos or external services. Keep a protected copy on another drive too. A verified backup manifest is not a successful restore test.</p>
+  <label class="inline"><input id="backup-metadata" type="checkbox"> Include metadata (uses more space)</label>
+  <button data-care="backup">Create and check a backup</button><button data-care="backups">Show existing backups</button>
+  <details id="restore-controls" hidden><summary>Restore a listed backup — replaces current server data</summary>
+    <p>Only backups from this server and the same Jellyfin version are accepted. Setup saves a current database recovery backup first. Everyone must stop watching; Jellyfin will restart. Keep an off-server copy before proceeding.</p>
+    <label for="backup-choice">Backup to restore</label><select id="backup-choice"></select>
+    <label for="restore-confirmation">Type RESTORE to confirm</label><input id="restore-confirmation" autocomplete="off">
+    <button data-care="restore">Save recovery backup and restore</button>
+  </details>
+  <h3>Keep setup current</h3><button data-care="updates">Check published setup releases</button><div id="care-update"></div>
+  <p id="care-out" role="status" aria-live="polite"></p>
+</details>
 <details class="card" id="findings-card"><summary>Report a problem / tester checklist</summary>
   <p>Available even if setup fails. Mark only what you actually tried. Results are your observations, not automatic playback proof.</p>
   <div id="tester-checks"></div>

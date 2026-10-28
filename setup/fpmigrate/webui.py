@@ -15,6 +15,7 @@ import threading
 import time
 import traceback
 import webbrowser
+from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -45,19 +46,38 @@ def friendly(exc: Exception) -> str:
 
 
 class Job:
-    def __init__(self):
+    def __init__(self, event_file=None):
         self.lock = threading.Lock()
         self.name = None
         self.running = False
         self.result = None
         self.error = None
         self.on_start = None
+        self.events = deque(maxlen=100)
+        self.event_file=Path(event_file) if event_file else None
+        if self.event_file:
+            try:
+                saved=json.loads(self.event_file.read_text(encoding='utf-8'))
+                for item in saved[-100:]:
+                    if isinstance(item,dict) and set(item)<= {'at','operation','state','category','httpStatus'}:
+                        self.events.append(item)
+            except (OSError,ValueError,TypeError):pass
+
+    def record(self, event):
+        self.events.append(event)
+        if self.event_file:
+            try:
+                tmp=self.event_file.with_suffix('.tmp')
+                tmp.write_text(json.dumps(list(self.events)),encoding='utf-8')
+                tmp.replace(self.event_file)
+            except OSError:pass  # diagnostics must never turn a successful operation into failure
 
     def start(self, name, fn) -> bool:
         with self.lock:
             if self.running:
                 return False
             self.name, self.running, self.result, self.error = name, True, None, None
+            self.record({'at': time.time(), 'operation': name, 'state': 'started'})
             if self.on_start:
                 self.on_start()
 
@@ -66,12 +86,15 @@ class Job:
                 res = fn()
                 with self.lock:
                     self.result = res
+                    self.record({'at': time.time(), 'operation': name, 'state': 'completed'})
             except Cancelled:
                 with self.lock:
                     self.error = "Paused. You can continue whenever you like."
+                    self.record({'at': time.time(), 'operation': name, 'state': 'paused'})
             except Exception as exc:  # noqa: BLE001 - surfaced to the user in friendly form
                 with self.lock:
                     self.error = friendly(exc)
+                    self.record({'at': time.time(), 'operation': name, 'state': 'failed', 'category': type(exc).__name__, 'httpStatus': getattr(exc,'status',None)})
                 sys.stderr.write(redact(traceback.format_exc()))
             finally:
                 with self.lock:
@@ -83,11 +106,15 @@ class Job:
         with self.lock:
             return {"name": self.name, "running": self.running, "result": self.result, "error": self.error}
 
+    def timeline(self):
+        with self.lock:
+            return [dict(event) for event in self.events]
+
 
 class App:
     def __init__(self, data_dir: Path):
         self.engine = Engine(data_dir)
-        self.job = Job()
+        self.job = Job(Path(data_dir)/'operation-timeline.json')
         def start_job():
             self.engine.cancel_event.clear()
             self.engine.progress = {"phase": "starting", "done": 0, "total": 0, "message": "Starting..."}
@@ -163,11 +190,46 @@ class App:
         from .onboarding import findings
         return findings(self, b)
 
+    def disconnect(self, _q, _b):
+        if self.job.view()['running']:
+            raise RuntimeError('Wait for the current operation before changing servers.')
+        if self.engine.jf:
+            try:self.engine.jf.logout()
+            except HttpError:pass
+        self.engine.jf=None
+        self.engine.jf_info={}
+        self.engine.plex=None
+        self.engine.plex_identity={}
+        self.engine.plex_account_token=None
+        self.engine.sources=[]
+        self.engine.user_map={}
+        self.engine.path_map=[]
+        self.engine.selected_sections=None
+        self.last_run=None
+        self.library_rows=None
+        return {'message':'Disconnected from setup. Installed features, media and saved migration history are kept.'}
+
     def migration_check(self, _q, b):
         run_id = b.get('runId') or self.last_run
         if not run_id or not self.engine.jf:
             raise ValueError('Complete a migration and connect its Jellyfin server first.')
         return {'started': self.job.start('verify', lambda: {'verify': self.engine.verify(run_id)})}
+
+    def server_care(self, _q, b):
+        from . import servercare
+        action=b.get('action')
+        if action=='updates':
+            return {'started':self.job.start('updates',servercare.check_release)}
+        jf=self.engine.jf
+        if not jf or not jf.token:
+            raise ValueError('Connect a Jellyfin administrator account first.')
+        progress=lambda message:self.engine._p('server-care',message=message)
+        if action=='inspect':fn=lambda:servercare.inspect(jf,progress)
+        elif action=='backups':fn=lambda:{'backups':servercare.backups(jf),'serverId':jf.public_info().get('Id')}
+        elif action=='backup':fn=lambda:servercare.create_backup(jf,b,progress)
+        elif action=='restore':fn=lambda:servercare.restore_backup(jf,b,progress)
+        else:raise ValueError('Choose a server care action.')
+        return {'started':self.job.start('care-'+action,fn)}
 
     def plex_connect(self, _q, b):
         try:
@@ -549,6 +611,8 @@ class App:
 
     ROUTES = {
         ("GET", "/api/preflight"): "preflight", ("POST", "/api/deployment"): "deployment",
+        ("POST", "/api/server-care"): "server_care",
+        ("POST", "/api/disconnect"): "disconnect",
         ("POST", "/api/findings"): "findings", ("POST", "/api/migration/check"): "migration_check",
         ("GET", "/api/status"): "status", ("POST", "/api/detect"): "detect",
         ("POST", "/api/plex/connect"): "plex_connect", ("POST", "/api/plex/signin/start"): "plex_signin_start",
@@ -645,6 +709,8 @@ def make_handler(app: App):
             except KeyError as exc:
                 return self._send(400, {"error": f"missing field {exc}"})
             except Exception as exc:  # noqa: BLE001
+                with app.job.lock:
+                    app.job.record({'at':time.time(),'operation':route,'state':'failed','category':type(exc).__name__,'httpStatus':getattr(exc,'status',None)})
                 if not isinstance(exc, (HttpError, PermissionError, RuntimeError, ValueError, TimeoutError)):
                     sys.stderr.write(redact(traceback.format_exc()))
                 return self._send(409, {"error": friendly(exc)})

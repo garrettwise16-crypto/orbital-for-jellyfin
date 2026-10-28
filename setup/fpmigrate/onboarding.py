@@ -109,4 +109,8 @@ def findings(app, body):
         data['migration']={'status':report['run']['status'],'writeStatus':report['writeStatus'],'exceptions':dict(Counter(x['kind'] for x in report['exceptions']))}
     result=job.get('result')
     if isinstance(result,dict) and isinstance(result.get('verify'),dict):data['migrationVerification']=result['verify']
+    # Operation names and error categories only; never titles, paths or exception bodies.
+    timeline=getattr(app.job,'timeline',None)
+    events=timeline() if callable(timeline) else None
+    if isinstance(events,list):data['operationTimeline']=events[-100:]
     return data

@@ -42,3 +42,13 @@ The automatic Windows path currently requires a local HTTP Jellyfin server witho
 The workflow is tested against isolated Jellyfin API fixtures, including first-run setup, feature retries, folder selection, and unsaved provider settings. The packaged executable is checked using disposable web files and a temporary profile. A clean Windows machine installation and its administrator prompts still require physical acceptance. Those checks are distinct from the automated tests.
 
 The source in this folder and its original service/plugin code use the repository MIT license. Bundled web files retain their GPL-2.0 license. Upstream runtime notices are in `notices/`. Optional paid implementations are not included.
+
+## Server readiness and recovery
+
+Open **Check server readiness, backups and updates** at any step. After connecting, check library access, writable server folders, available local disk space, the current video-conversion configuration and detected Windows graphics hardware. These checks do not enable hardware acceleration or prove playback works.
+
+Create a server-owned database backup, optionally including metadata. Setup verifies the returned archive listing and database manifest. To restore, choose a backup for the same Jellyfin version and type RESTORE. Setup checks that nobody is watching, checks the server identity, and saves a recovery backup of the current database before requesting restoration. Jellyfin restarts: reconnect and check the result. A lost connection is reported as an unknown outcome, never automatically retried. Copies on another drive, media backups and external-service backups remain your responsibility.
+
+**Start over / change server** clears the current connection and unsaved choices without removing installed features or migration history. Saved migrations cannot be applied, verified or undone against a different Jellyfin server.
+
+Problem reports include a bounded operation timeline (operation names, completion states and error categories), retained across Setup restarts. Exception messages, media titles and credentials are not stored in this timeline. Review the report before sharing. **Check published setup releases** opens official release notes; it does not silently upgrade Jellyfin or claim that this unsigned executable is publisher-signed.
