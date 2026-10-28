@@ -711,6 +711,39 @@ $("btn-catalogue").addEventListener("click", ev => busy(ev.target, async () => {
 }));
 
 // Live TV uses Jellyfin itself, including installations without the Sports plugin.
+function paintRebel(data) {
+  $("rebel-out").textContent=data.message;
+  $("rebel-docker").hidden=data.phase!=="docker";
+  $("btn-rebel-install").hidden=data.phase!=="install";
+  $("rebel-configure").hidden=data.phase!=="configure";
+  $("btn-rebel-check").textContent="Check again";
+}
+$("btn-rebel-check").addEventListener("click",ev=>busy(ev.target,async()=>{
+  $("rebel-out").textContent="Checking this computer and Docker…";
+  try { paintRebel(await api("GET","/api/rebel")); }
+  catch(e) { $("rebel-out").textContent=e.message; }
+}));
+$("btn-rebel-install").addEventListener("click",ev=>busy(ev.target,async()=>{
+  if(!$("rebel-personal").checked){$("rebel-out").textContent="Review the terms and confirm personal use above first.";$("rebel-personal").focus();return;}
+  try { await api("POST","/api/rebel/install",{personal_use:true});paintRebel(await waitJob(p=>{$("rebel-out").textContent=p.message||"Preparing Rebel…";})); }
+  catch(e) { $("rebel-out").textContent=e.message; }
+}));
+$("btn-rebel-connect").addEventListener("click",ev=>busy(ev.target,async()=>{
+  if(S.liveTVRunning)return;
+  if(S.liveTVDirty && !confirm("Replace the unsaved Live TV form with your local Rebel connection? Saved sources will be kept."))return;
+  $("live-tv-form").open=true;
+  const values={kind:"m3u",name:"My Rebel channels",url:"http://127.0.0.1:18808/playlist",guide:"http://127.0.0.1:18808/epg",user:"",password:"",connections:"1"};
+  for(const [key,value] of Object.entries(values))$("live-tv-"+key).value=value;
+  liveTVType();S.liveTVDirty=true;S.liveTVChecked=false;lockLiveTV(true);
+  $("rebel-out").textContent="Checking your channels and guide. No video is opened…";
+  try {
+    await api("POST","/api/live-tv/check",liveTVBody());
+    await api("POST","/api/live-tv/save",liveTVBody());
+    const result=await waitJob(p=>{$("rebel-out").textContent=p.message||"Saving in Jellyfin…";});
+    S.liveTVDirty=false;S.liveTVChecked=true;$("rebel-out").textContent=result.message;$("live-tv-out").textContent=result.message;await loadLiveTv();
+  } catch(e){$("rebel-out").textContent=e.message+" Finish source setup in Rebel, or paste its complete Players links below if an API key is enabled. Then test and save.";}
+  finally {lockLiveTV(false);}
+}));
 const liveTVFields = ["kind", "name", "url", "user", "password", "guide", "connections"];
 function liveTVBody() {
   return Object.fromEntries(liveTVFields.map(k => [k === "user" ? "username" : k, $("live-tv-" + k).value]));

@@ -36,6 +36,14 @@ The guide supplies programme names and schedules for Live TV. Sports can also us
 
 ## Matching games to your channels
 
+### Optional personal Rebel setup
+
+Orbital Setup → Connect live TV → **Help me set up Rebel for personal use** checks local Docker, starts the official container, and resumes after you configure sources in Rebel's dashboard. **My sources are ready — test and connect** validates its playlist and XMLTV guide and saves them to Jellyfin. It never copies another person's sources or credentials.
+
+Docker installation/restarts and Rebel's source selection are user steps; the workflow explains them and can be resumed. Existing remote installations use their complete Players links in **Add a live TV source**, including their API key when enabled. The automatic container is local-only, uses a dedicated persistent volume, and receives no Docker host-control socket. Follow Rebel's official instructions for updates. No sports package or content rights are included. [Official setup](https://www.rebeliptv.com/setup) · [Personal-use terms](https://www.rebeliptv.com/legal).
+
+An HDHomeRun tuner is the straightforward choice for a supported antenna setup. An existing provider's playlist or compatible login is the simplest choice if you already have a service. Neither requires Rebel.
+
 When a connected source supplies a game's broadcast networks, such as `ESPN`, `FOX` or `NBC`, sports-hub compares those names with your Jellyfin channel names and offers a **Watch** button when one matches.
 
 - Channel numbers, `HD`, `East`/`West` and similar extras are ignored, so `206 ESPN HD` matches `ESPN`.

@@ -48,6 +48,11 @@ ALLOW = [
 
 
 def allowed(rule, path, text):
+    # Owner-requested official personal-use connector; never household playlists or credentials.
+    rebel_files = {'setup/fpmigrate/rebel.py', 'setup/fpmigrate/webui.py',
+                   'setup/fpmigrate/ui/app.js', 'setup/fpmigrate/ui/index.html',
+                   'setup/tests/test_rebel.py', 'docs/DATA-SOURCES.md'}
+    if rule == 'private media source' and path.as_posix() in rebel_files and text.lower() in {'rebel', 'rebeliptv', 'rebel iptv'}: return True
     # Negative artwork test rejects URL userinfo; reserved test domain and fake credential only.
     if rule == 'email address' and path.as_posix() == 'setup/tests/test_guided_setup.py' and text == 'pass@images.example.test': return True
     # User-requested generic Live TV connectors: protocol names, never household providers.

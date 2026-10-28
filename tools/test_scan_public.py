@@ -3,6 +3,11 @@ from pathlib import Path
 import scan_public as scanner
 
 class ScopedExceptions(unittest.TestCase):
+    def test_personal_connector_exception_is_narrow(self):
+        term = 're' + 'bel'
+        self.assertTrue(scanner.allowed('private media source', Path('setup/fpmigrate/' + term + '.py'), term))
+        self.assertFalse(scanner.allowed('private media source', Path('web/dist/orbital.js'), term))
+        self.assertFalse(scanner.allowed('private media source', Path('setup/fpmigrate/' + term + '.py'), 'tre' + 'x'))
     def test_browser_callback_only_in_named_distribution_files(self):
         rule = next(k for k in scanner.RULES if k.startswith('proprietary'))
         term = 'requestVideo' + 'FrameCallback'

@@ -171,6 +171,22 @@
     <div class="card soft" id="live-tv-card">
       <h2>Connect live TV</h2>
       <p>Optional. Connect your own IPTV subscription, playlist, or antenna tuner. This adds channels to web, Orbital Phone and Orbital TV through the same Jellyfin server.</p>
+      <p>Already have a subscription or antenna tuner? Use <strong>Add a live TV source</strong> below. Want to organise your own sources first? Try the optional Rebel setup.</p>
+      <details id="rebel-workflow">
+        <summary>Help me set up Rebel for personal use</summary>
+        <p>Rebel runs on your own always-on computer and organises sources you choose. It does not include a guaranteed sports package. Its <a href="https://www.rebeliptv.com/legal" target="_blank" rel="noopener noreferrer">personal-use terms</a> and the terms of your sources apply.</p>
+        <ol><li>Check this computer and prepare Docker.</li><li>Install Rebel, then choose sources in its dashboard.</li><li>Test the channel list and guide, then save them in Jellyfin.</li></ol>
+        <label><input type="checkbox" id="rebel-personal"> This is for my personal server; I have reviewed Rebel’s terms.</label>
+        <div class="row"><button id="btn-rebel-check">Check this computer</button><button id="btn-rebel-install" hidden>Install Rebel on this computer</button></div>
+        <p id="rebel-out" role="status" aria-live="polite">Start with Check this computer. This step does not change anything.</p>
+        <p id="rebel-docker" hidden><a href="https://docs.docker.com/desktop/setup/install/windows-install/" target="_blank" rel="noopener noreferrer">Open the official Docker Desktop installer instructions</a>. Complete its installation and any restart, open Docker Desktop, then return and choose Check again. Docker has its own licensing terms.</p>
+        <div id="rebel-configure" hidden>
+          <p><a href="http://127.0.0.1:18808" target="_blank" rel="noopener noreferrer">Open my Rebel dashboard</a>. It may take a minute to start. Set your dashboard password, choose your country and sources, and let Rebel build its channel list. Keep the dashboard on this computer; remote viewing is configured through Jellyfin.</p>
+          <button id="btn-rebel-connect">My sources are ready — test and connect</button>
+          <p class="sub">If you enabled an API key, copy the complete playlist and guide links from Rebel’s Players settings into the form below, then test and save. An empty channel list means source setup still needs attention.</p>
+        </div>
+        <p class="sub">Already running Rebel elsewhere? Copy its playlist and guide links into Add a live TV source below. <a href="https://www.rebeliptv.com/setup" target="_blank" rel="noopener noreferrer">Official setup for other computers and NAS devices</a>. This installer keeps Rebel’s data and never replaces other containers. Update Rebel through its official instructions; Docker host-control access is not granted.</p>
+      </details>
       <details id="live-tv-form">
         <summary>Add a live TV source</summary>
         <h3>1. Choose what your provider gave you</h3>

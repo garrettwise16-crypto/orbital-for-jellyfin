@@ -377,6 +377,26 @@ class App:
             raise ValueError("Connect Jellyfin first.")
         return live_tv.status(self.engine.jf)
 
+    def rebel_status(self, _q, _b):
+        from . import rebel
+        if not self.engine.jf:
+            raise ValueError('Connect Jellyfin first.')
+        return rebel.ready(self.engine.jf)
+
+    def rebel_install(self, _q, body):
+        from . import rebel
+        jf = self.engine.jf
+        if not jf:
+            raise ValueError('Connect Jellyfin first.')
+        token = jf.token
+        def progress(message):
+            if self.engine.jf is not jf or jf.token != token:
+                raise Cancelled()
+            self.engine._p('rebel', message=message)
+        if not self.job.start('rebel', lambda: rebel.install(jf, body or {}, progress)):
+            raise ValueError('Another setup step is running. Wait for it to finish.')
+        return {'started': True}
+
     def live_tv_check(self, _q, body):
         from . import live_tv
         if not self.engine.jf:
@@ -503,6 +523,7 @@ class App:
         ("GET", "/api/integrations"): "integrations_get", ("POST", "/api/integrations"): "integrations_set",
         ("GET", "/api/live-tv"): "live_tv_status", ("POST", "/api/live-tv/check"): "live_tv_check",
         ("POST", "/api/live-tv/save"): "live_tv_save",
+        ("GET", "/api/rebel"): "rebel_status", ("POST", "/api/rebel/install"): "rebel_install",
         ("POST", "/api/remote-access"): "remote_access",
         ("POST", "/api/preview"): "preview", ("POST", "/api/apply"): "apply", ("POST", "/api/cancel"): "cancel",
         ("POST", "/api/rollback"): "rollback", ("POST", "/api/undo-setup"): "undo_setup",
