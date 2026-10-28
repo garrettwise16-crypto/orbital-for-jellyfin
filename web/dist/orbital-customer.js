@@ -123,6 +123,10 @@
       if (starting) throw new Error('A playback request is already in progress.');
       starting = true;
       try {
+        // Stock channel details uses an empty string for automatic source selection.
+        // Preserve explicit source identity, and leave the caller's options untouched.
+        var request = Object.assign({}, options);
+        if (request.mediaSourceId === '') delete request.mediaSourceId;
         if (this._lifecycle && !this._lifecycle.detached) {
           // A new explicit Play may reconcile a previous settled retirement failure.
           // The native protocol checks the same lease and any late acknowledgement;
@@ -131,7 +135,7 @@
             await this.retryLocalRetirement();
           } else await this.stop(true);
         }
-        return await original.call(this, options);
+        return await original.call(this, request);
       } finally { starting = false; }
     };
     player._orbitalPublicRetirement = true;

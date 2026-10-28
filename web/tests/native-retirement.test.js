@@ -23,3 +23,9 @@ test('pending retirement is awaited without requesting a retry',async()=>{
 test('failed explicit reconciliation still blocks the next stream',async()=>{
  let starts=0;const p={_lifecycle:{detached:false,retirement:{},retirementPending:false},stop:async()=>{},retryLocalRetirement:async()=>{throw Error('lease not detached');},play:async()=>starts++};install(p);await assert.rejects(p.play({}),/not detached/);assert.equal(starts,0);
 });
+test('stock automatic source sentinel is normalized without changing caller options',async()=>{
+ const options={mediaSourceId:'',items:[{Id:'channel'}]};let received;const p={stop:async()=>{},play:async o=>received=o};install(p);await p.play(options);assert.equal(received.mediaSourceId,undefined);assert.equal(options.mediaSourceId,'');assert.deepEqual(received.items,options.items);
+});
+test('an explicit source remains exact',async()=>{
+ let received;const p={stop:async()=>{},play:async o=>received=o};install(p);await p.play({mediaSourceId:'chosen-source'});assert.equal(received.mediaSourceId,'chosen-source');
+});
