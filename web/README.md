@@ -4,6 +4,8 @@ A responsive Jellyfin web shell with Home, library browsing, Search, Live TV, Sp
 
 This preview contains the readable JavaScript and CSS in `dist/` under GPL-2.0 (see LICENSE). It does not include Jellyfin itself, media, team artwork files or a replacement Jellyfin core bundle. Keep Jellyfin's own licensing and notices with your installation.
 
+Baseball trackers show full pitcher and batter names and place pitch/result captions within the animation surface below the plate. A single retained pitch is not duplicated in a history row. Zone close-ups include edge contact and near misses up to four inches outside. These rendering changes do not change the estimated/manual timing model.
+
 ## Optional services
 
 Configure the public sports-hub from this repository behind the same origin at `/sports/api/`, or use a compatible Sports plugin. The adapter probes its authenticated status endpoint. Without that service the ordinary media library still works and Sports navigation is hidden. Tracker responses with or without a game snapshot are supported. Missing optional services are answered locally as unavailable.

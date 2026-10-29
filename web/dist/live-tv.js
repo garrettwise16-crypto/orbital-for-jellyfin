@@ -1330,8 +1330,7 @@ window.OrbitalFollowed={
   if(Math.abs(end[1]-FRONT_PLANE)>1e-5||Math.abs(x-f.plate[0])>.001||Math.abs(z-f.plate[1])>.001)return null;
   const closestX=Math.max(-HALF_WIDTH,Math.min(HALF_WIDTH,x)),closestZ=Math.max(zone.bottom,Math.min(zone.top,z)),dx=x-closestX,dz=z-closestZ,d=Math.hypot(dx,dz);
   const signed=d||-Math.min(x+HALF_WIDTH,HALF_WIDTH-x,z-zone.bottom,zone.top-z),gap=signed-RADIUS;
-  if(Math.abs(signed)<=EPS||Math.abs(Math.abs(signed)-RADIUS)<=EPS)return null;
-  const kind=signed<-RADIUS-EPS?'hit':Math.abs(signed)<RADIUS-EPS?'edge':gap>EPS&&gap<=2/12?'near':null;
+  const kind=signed<-RADIUS-EPS?'hit':gap<=EPS?'edge':gap<=4/12?'near':null;
   if(!kind)return null;
   return {kind,signedCenterFt:signed,gapInches:gap*12,nearest:[closestX,FRONT_PLANE,closestZ],surface:d?[x-RADIUS*dx/d,FRONT_PLANE,z-RADIUS*dz/d]:null,nominalRadiusFt:RADIUS,plane:FRONT_PLANE,basis:'approximate nominal ball edge to drawn front-plane zone'};
  }
@@ -2571,6 +2570,7 @@ function sameUpdateResultContact(model,pitch,current,hit,formatted,localReview=f
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   state.wakeAt=null;
   const card = node('section', 'otv-baseball-card otc-glass obc-compact obc-stage-layout');
+  card.classList.add('obc-integrated');
   const header = node('div', 'obc-header');
   header.append(node('strong', '', 'Pitch tracker')); card.append(header);
   const s = model.situation || {}, substitution = releasedSubstitution(model);
@@ -3356,7 +3356,7 @@ function sameUpdateResultContact(model,pitch,current,hit,formatted,localReview=f
    if(state.recap&&!showRecap)state.wakeAt=Number.isFinite(state.wakeAt)?Math.min(state.wakeAt,state.recap.showAt):state.recap.showAt;
    if(motion)motion.initialized=true;
    if(model.kind==='baseball'&&!showRecap){
-    if(pitches.length){
+    if(pitches.length>1){
      const history=node('div','obc-history');history.setAttribute('aria-label','Last released pitches');
      for(const p of pitches){
       const geometry=reviewGeometry(model,p),button=node('button','obc-history-pitch');button.type='button';

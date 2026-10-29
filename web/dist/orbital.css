@@ -1994,3 +1994,20 @@ html body .otv-all-filters .otv-af-field input,html body .otv-all-filters .otv-a
 /* A reused stock video route can restore the browsing background on Stop.
    Keep that background clear while its full-screen video container remains. */
 html.ob5-player-route body:has(>.videoPlayerContainer:not(.hide)) .backgroundContainer{background:transparent!important}
+
+/* Readable names and one continuous animation surface; release/animation gates unchanged. */
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-players{display:flex!important;flex-direction:column!important;gap:6px!important}
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-person{width:100%!important;min-width:0!important;display:flex!important;gap:6px!important;align-items:center}
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-person-copy{min-width:0!important;flex:1}
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-person-copy>strong{display:block!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;-webkit-line-clamp:unset!important;font-size:17px!important;line-height:1.2!important;overflow-wrap:anywhere}
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-person-copy>span{font-size:11px!important;line-height:1.25!important}
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-person>img{width:30px!important;height:30px!important;flex:none;object-fit:cover}
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated >.obc-main{gap:0!important;border:0!important;border-radius:9px;background:#132438!important;overflow:hidden!important}
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-main>.obc-zone{margin:0!important;border:0!important;border-radius:0!important;background:#132438!important}
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-main>.obc-result-area{border:0!important;border-radius:0!important;box-shadow:none!important;margin:0!important;height:112px!important;min-height:112px!important;padding:6px 9px!important;background:linear-gradient(#132438,#08111be6)!important;overflow:auto!important}
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-result-area>.obc-pitch{gap:3px!important;min-height:0!important}
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-pitch>:is(.obc-headline,.obc-pitch-type){font-size:22px!important;line-height:1.12!important}
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-pitch>.obc-speed{gap:4px!important;white-space:nowrap!important}
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-pitch>.obc-result{font-size:14px!important;line-height:1.2!important}
+.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-history-pitch{min-height:44px!important}
+@media(max-height:500px){.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-main>.obc-result-area{height:104px!important;min-height:104px!important}.otv-trk.otv-trk[data-server-presentation=schema2] .otv-baseball-card.otc-glass.obc-compact.obc-stage-layout.obc-integrated .obc-person-copy>strong{font-size:16px!important}}
