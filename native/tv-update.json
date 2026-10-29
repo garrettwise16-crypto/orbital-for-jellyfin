@@ -1,16 +1,16 @@
 {
   "schema": 1,
   "package": "org.orbitalforjellyfin.tv",
-  "version": "0.19.10-orbital.303",
-  "version_code": 191303,
-  "build": 303,
-  "release_tag": "native-v2026.10.27-preview.2",
-  "apk": "orbital-tv-preview-0.19.10-303.apk",
-  "apk_url": "https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/download/native-v2026.10.27-preview.2/orbital-tv-preview-0.19.10-303.apk",
-  "sha256": "720e101888a27a45362f9cf4bb3a8cea2c51b942994fc4208fd6029d5eabbddc",
+  "version": "0.19.10-orbital.304",
+  "version_code": 191304,
+  "build": 304,
+  "release_tag": "native-v2026.10.28-preview.1",
+  "apk": "orbital-tv-preview-0.19.10-304.apk",
+  "apk_url": "https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/download/native-v2026.10.28-preview.1/orbital-tv-preview-0.19.10-304.apk",
+  "sha256": "c5f97be7473b5364bc6e17af9a822c7710387826d7604eaff91c338f112b1c48",
   "bytes": 28945028,
   "certificate_sha256": "ba2e31580e676566162aa84eb9d22a0e8f94612b6856484355a6eebe3fd1362b",
-  "source_url": "https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/download/native-v2026.10.27-preview.2/orbital-tv-303-source.zip",
-  "source_sha256": "edda6337b841c64585ab8eda98cd4cb98899efc4f787636deae5e016ad559be4",
-  "notes": "Public preview: episode picker, restart, ten-second seeking, channels and free estimated trackers. Requires your own Jellyfin server and connected data sources. Faster live switching remains under validation."
+  "source_url": "https://github.com/garrettwise16-crypto/orbital-for-jellyfin/releases/download/native-v2026.10.28-preview.1/orbital-tv-304-source.zip",
+  "source_sha256": "6cf829c5dae1fbac6832730e398f97cf640b2cccd5a2eb1b4838adf5437d36c4",
+  "notes": "Public preview: readable matchup names, integrated animation captions, retained speed units and updated edge-pitch close-up. Requires your own server and connected sources. Exact public-device and live-timing acceptance remain pending."
 }
